@@ -20,9 +20,17 @@ if (!process.env.TAVILY_API_KEY) {
   console.warn("WARNING: TAVILY_API_KEY is missing. Market prices will not be available");
 }
 
-// Khởi tạo Google Gemini AI (nhận diện ảnh + lọc kết quả tìm kiếm phù hợp)
+// Gói Free giới hạn số lượt/ngày RIÊNG cho từng model (vd. gemini-3.6-flash chỉ 20 lượt/ngày),
+// nên khi model chính hết lượt hoặc quá tải thì chuyển lần lượt sang các model dự phòng.
+const FALLBACK_MODELS = (process.env.GEMINI_FALLBACK_MODELS ||
+  "gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-flash-lite-latest,gemini-3.7-flash")
+  .split(",").map((m) => m.trim()).filter(Boolean);
+const MODEL_CHAIN = [...new Set([MODEL, ...FALLBACK_MODELS])];
+
+// Khởi tạo Google Gemini AI (nhận diện ảnh + lọc kết quả tìm kiếm phù hợp).
+// Tắt cơ chế tự thử lại của SDK (mặc định 5 lần, chờ tới 60 giây/lần) để chuyển model ngay thay vì treo.
 const ai = process.env.GEMINI_API_KEY
-  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+  ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY, httpOptions: { retryOptions: { attempts: 1 } } })
   : null;
 
 // Vercel (và hầu hết hosting) đứng sau proxy: cần tin header X-Forwarded-For
@@ -149,7 +157,6 @@ Ghi chú của người dùng: ${String(note || "Không có").slice(0, 1500)}
 Mục đích sử dụng/thông tin tuổi đời: ${String(usedFor || "Chưa cung cấp").slice(0, 500)}`;
 
   const response = await callGemini({
-    model: MODEL,
     contents: [{
       role: "user",
       parts: [
@@ -161,38 +168,81 @@ Mục đích sử dụng/thông tin tuổi đời: ${String(usedFor || "Chưa cu
     }],
     config: {
       responseMimeType: "application/json",
-      maxOutputTokens: 2048,
-      // Gemini 2.5 tính token "suy nghĩ" vào maxOutputTokens; tắt đi để JSON không bị cắt cụt
-      thinkingConfig: { thinkingBudget: 0 }
+      maxOutputTokens: 2048
     }
   });
 
   return parseJsonFromText(response.text);
 }
 
-// Bọc lời gọi Gemini để chuyển lỗi hết hạn mức/quá tải thành thông báo dễ hiểu
-async function callGemini(request) {
-  trackStat("gemini_calls");
-  try {
-    return await ai.models.generateContent(request);
-  } catch (error) {
-    const status = Number(error?.status);
-    if (status === 429) {
-      throw httpError(429, "Đã hết lượt dùng Gemini trong hôm nay hoặc gửi quá nhanh. Vui lòng thử lại sau.");
+// Model tạm bỏ qua: hết lượt trong ngày (429), không tồn tại (404) hoặc vừa quá tải (503).
+// Lưu trong bộ nhớ của từng instance; mất khi khởi động lại thì chỉ tốn thêm một lần gọi thử.
+const modelCooldownUntil = new Map();
+
+function retryDelayMs(error) {
+  const match = String(error?.message || "").match(/"retryDelay":\s*"(\d+(?:\.\d+)?)s"/);
+  return match ? Number(match[1]) * 1000 : null;
+}
+
+function cooldownMs(status, error) {
+  if (status === 429) return Math.min(retryDelayMs(error) ?? 60 * 60 * 1000, 24 * 60 * 60 * 1000);
+  if (status === 404) return 24 * 60 * 60 * 1000;
+  return 60 * 1000; // quá tải / hết thời gian chờ: thử lại model này sau 1 phút
+}
+
+// Tắt "suy nghĩ" để trả lời nhanh và JSON không bị cắt cụt. Mỗi đời model nhận một kiểu tùy chọn khác nhau
+// (một số model 3.x lite báo lỗi 400 với thinkingBudget), nên gặp 400 thì thử kiểu còn lại.
+const THINKING_VARIANTS = [{ thinkingBudget: 0 }, { thinkingLevel: "minimal" }];
+
+// Gọi Gemini, tự chuyển sang model dự phòng khi model hiện tại hết lượt hoặc quá tải.
+// preferLite: ưu tiên model "lite" (đủ cho việc đơn giản như lọc kết quả) để dành lượt model mạnh cho nhận diện ảnh.
+// Chỉ báo lỗi khi mọi model đều không dùng được.
+async function callGemini(request, { timeoutMs = 30000, preferLite = false } = {}) {
+  const now = Date.now();
+  const chain = preferLite
+    ? [...MODEL_CHAIN.filter((m) => m.includes("lite")), ...MODEL_CHAIN.filter((m) => !m.includes("lite"))]
+    : MODEL_CHAIN;
+  const available = chain.filter((m) => (modelCooldownUntil.get(m) || 0) <= now);
+  // Mọi model đều đang tạm nghỉ thì vẫn thử lại toàn bộ, thay vì báo lỗi ngay
+  const models = available.length ? available : chain;
+  const statuses = [];
+
+  for (const model of models) {
+    for (const thinkingConfig of THINKING_VARIANTS) {
+      trackStat("gemini_calls");
+      try {
+        const response = await ai.models.generateContent({
+          ...request,
+          model,
+          config: { ...request.config, thinkingConfig, httpOptions: { timeout: timeoutMs } }
+        });
+        modelCooldownUntil.delete(model);
+        return response;
+      } catch (error) {
+        const timedOut = error?.name === "AbortError" || error?.name === "TimeoutError" || /timed? ?out|aborted/i.test(String(error?.message));
+        const status = timedOut ? 504 : Number(error?.status) || 0;
+        if (status === 401 || status === 403) {
+          console.error("Gemini request rejected:", error?.message);
+          throw httpError(502, "Gemini từ chối yêu cầu. Kiểm tra lại GEMINI_API_KEY.");
+        }
+        if (![400, 404, 429, 500, 503, 504].includes(status)) throw error;
+        if (status === 400 && thinkingConfig !== THINKING_VARIANTS.at(-1)) continue;
+        console.warn(`Gemini ${model} lỗi ${status}, chuyển model khác:`, String(error?.message).slice(0, 200));
+        // 400 có thể do chính yêu cầu (ảnh hỏng), không phải do model, nên không cho model tạm nghỉ
+        if (status !== 400) modelCooldownUntil.set(model, Date.now() + cooldownMs(status, error));
+        statuses.push(status);
+        break;
+      }
     }
-    if (status === 503 || status === 500) {
-      throw httpError(503, "Gemini đang quá tải. Vui lòng thử lại sau ít phút.");
-    }
-    if (status === 404) {
-      console.error("Gemini model unavailable:", error?.message);
-      throw httpError(502, `Model ${request.model} không còn khả dụng. Hãy đổi GEMINI_MODEL sang model khác.`);
-    }
-    if (status === 400 || status === 403) {
-      console.error("Gemini request rejected:", error?.message);
-      throw httpError(502, "Gemini từ chối yêu cầu. Kiểm tra lại GEMINI_API_KEY và GEMINI_MODEL.");
-    }
-    throw error;
   }
+
+  if (statuses.length && statuses.every((s) => s === 400)) {
+    throw httpError(422, "AI không xử lý được ảnh/yêu cầu này. Hãy thử ảnh khác.");
+  }
+  if (statuses.includes(429)) {
+    throw httpError(429, "Đã hết lượt dùng AI miễn phí trong hôm nay. Hạn mức tự làm mới vào khoảng 14h–15h (giờ Việt Nam).");
+  }
+  throw httpError(503, "Dịch vụ AI đang quá tải. Vui lòng thử lại sau ít phút.");
 }
 
 function productIdentity(product) {
@@ -260,7 +310,7 @@ function searchQueries(product) {
 
 // Gemini chỉ CHỌN kết quả nào đúng sản phẩm; giá được trích xuất riêng bằng code từ nội dung nguồn.
 async function selectComparableSources(product, searchResults) {
-  if (!searchResults.length) return [];
+  if (!searchResults.length) return { sources: [], method: "ai" };
 
   const compactResults = searchResults.map((r, index) => ({
     index,
@@ -281,28 +331,48 @@ Sản phẩm nhận diện: ${JSON.stringify({
   })}
 Kết quả tìm kiếm: ${JSON.stringify(compactResults)}`;
 
-  const response = await callGemini({
-    model: MODEL,
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-      maxOutputTokens: 1024,
-      thinkingConfig: { thinkingBudget: 0 }
-    }
-  });
-
   let parsed;
   try {
+    const response = await callGemini({
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 1024
+      }
+    }, { timeoutMs: 20000, preferLite: true });
     parsed = parseJsonFromText(response.text);
-  } catch {
-    return [];
+  } catch (error) {
+    // AI lọc nguồn hết lượt/quá tải: vẫn tính được giá bằng cách lọc theo từ khóa thay vì bỏ trống giá
+    console.warn("AI source filter unavailable, using keyword filter:", error.message);
+    return { sources: keywordComparableSources(product, searchResults), method: "keyword" };
   }
 
   const indexes = Array.isArray(parsed.relevant_indexes)
     ? parsed.relevant_indexes.filter((n) => Number.isInteger(n) && n >= 0 && n < searchResults.length)
     : [];
 
-  return [...new Set(indexes)].map((index) => searchResults[index]);
+  return { sources: [...new Set(indexes)].map((index) => searchResults[index]), method: "ai" };
+}
+
+// Lọc dự phòng không dùng AI: giữ kết quả có nhắc đúng model (hoặc đủ các từ khóa của tên sản phẩm)
+// và loại các trang phụ kiện. Kém chính xác hơn AI nên chỉ dùng khi AI không khả dụng.
+const ACCESSORY_WORDS = /\b(op lung|bao da|cuong luc|mieng dan|cu sac|cap sac|day deo|tui dung|case|cover|charger|cable|strap|phu kien)\b/;
+
+function keywordComparableSources(product, searchResults) {
+  const modelText = normalizeText(product.model);
+  const modelTokens = modelText.split(" ").filter((t) => t.length >= 2);
+  const nameTokens = normalizeText([product.brand, product.product_name].filter(Boolean).join(" "))
+    .split(" ").filter((t) => t.length >= 2);
+  const productIsAccessory = ACCESSORY_WORDS.test(normalizeText(product.product_name));
+
+  return searchResults.filter((r) => {
+    const text = normalizeText(`${r.title} ${r.content}`);
+    const title = normalizeText(r.title);
+    if (!productIsAccessory && ACCESSORY_WORDS.test(title)) return false;
+    if (modelTokens.length) return modelTokens.every((t) => text.includes(t));
+    const hits = nameTokens.filter((t) => text.includes(t)).length;
+    return nameTokens.length > 0 && hits / nameTokens.length >= 0.75;
+  });
 }
 
 async function searchMarketListings(product) {
@@ -324,7 +394,8 @@ async function searchMarketListings(product) {
       return true;
     });
 
-  return { listings: await selectComparableSources(product, searchResults) };
+  const { sources, method } = await selectComparableSources(product, searchResults);
+  return { listings: sources, filterMethod: method };
 }
 
 // Extract only explicit price strings found in search result text.
@@ -700,6 +771,7 @@ app.post("/api/valuate", valuationLimiter, async (req, res) => {
         questions: product.questions || ["Thương hiệu và model chính xác của sản phẩm là gì?"],
         selling_tips: [],
         sources: [],
+        price_unavailable_reason: "missing_model",
         requires_more_info: true
       });
     }
@@ -725,6 +797,9 @@ app.post("/api/valuate", valuationLimiter, async (req, res) => {
       snippet: listing.snippet.slice(0, 500)
     }));
 
+    const keywordNote = market.filterMethod === "keyword"
+      ? " Lưu ý: AI lọc nguồn đang tạm hết lượt nên nguồn được lọc theo từ khóa tên/model, hãy kiểm tra lại các nguồn bên dưới."
+      : "";
     const noPriceMessage = "Không đủ dữ liệu giá thị trường có thể kiểm chứng để đưa ra giá. ReLoop không tự tạo giá thay thế; hãy thử lại hoặc bổ sung model chính xác.";
 
     res.json({
@@ -741,7 +816,7 @@ app.post("/api/valuate", valuationLimiter, async (req, res) => {
         ? Math.min(0.95, 0.35 + 0.1 * estimate.stats.source_count + 0.05 * estimate.stats.comparable_price_count)
         : 0.15,
       reasoning: estimate.price
-        ? `Giá được ước tính từ các mức giá trích xuất được trong ${estimate.stats.source_count} nguồn tham khảo phù hợp. Giá trung vị tham khảo trước điều chỉnh tình trạng: ${estimate.stats.market_median_before_condition.toLocaleString("vi-VN")} VND. Hệ số tình trạng áp dụng: ${estimate.stats.condition_multiplier}. Đây là giá rao bán tham khảo, không phải dữ liệu giao dịch đã xác minh.`
+        ? `Giá được ước tính từ các mức giá trích xuất được trong ${estimate.stats.source_count} nguồn tham khảo phù hợp. Giá trung vị tham khảo trước điều chỉnh tình trạng: ${estimate.stats.market_median_before_condition.toLocaleString("vi-VN")} VND. Hệ số tình trạng áp dụng: ${estimate.stats.condition_multiplier}. Đây là giá rao bán tham khảo, không phải dữ liệu giao dịch đã xác minh.${keywordNote}`
         : (marketError || noPriceMessage),
       questions: product.questions || [],
       selling_tips: [
@@ -753,7 +828,9 @@ app.post("/api/valuate", valuationLimiter, async (req, res) => {
       price_method: "median_of_extracted_comparable_listing_prices_adjusted_for_visible_condition",
       market_data_note: "Giá được trích xuất từ nội dung kết quả tìm kiếm. Các trang có thể thay đổi giá; cần kiểm tra trực tiếp trước khi giao dịch.",
       original_price_note: estimate.originalPriceNote || null,
-      requires_more_info: !estimate.price
+      // "service": lỗi tạm thời của dịch vụ tìm giá, người dùng chỉ cần thử lại, không cần bổ sung thông tin
+      price_unavailable_reason: estimate.price ? null : (marketError ? "service" : "insufficient_data"),
+      requires_more_info: !estimate.price && !marketError
     });
   } catch (error) {
     const status = Number(error.status) || 500;

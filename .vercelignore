@@ -1,0 +1,7 @@
+# Không bao giờ tải các file này lên Vercel
+.env
+.env.*
+!.env.example
+data/
+node_modules/
+.git/

@@ -1461,15 +1461,22 @@
                 return `<div class="bg-white rounded-xl shadow-sm p-10 text-center text-gray-400"><i class="fas fa-magic text-4xl mb-3"></i><p class="text-sm">Kết quả định giá AI sẽ xuất hiện ở đây</p></div>`;
             }
             if (!r.price) {
+                // Lỗi tạm thời của dịch vụ (hết lượt/quá tải): chỉ cần thử lại, không bắt người dùng bổ sung thông tin
+                const serviceIssue = r.price_unavailable_reason === 'service';
                 return `
                     <div class="bg-white rounded-xl shadow-sm p-5 space-y-4">
                         <h3 class="font-bold text-gray-800">${escapeHtml(r.product_name || "Sản phẩm")}</h3>
-                        <p class="text-sm text-gray-700">${escapeHtml(r.reasoning || "Chưa đủ dữ liệu giá thị trường.")}</p>
+                        ${serviceIssue ? `
+                            <div class="bg-yellow-50 border border-yellow-200 text-yellow-900 p-3 rounded-lg text-sm flex gap-2">
+                                <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                                <span>Đã nhận diện được sản phẩm nhưng chưa lấy được giá: ${escapeHtml(r.reasoning || "dịch vụ tìm giá đang bận")}</span>
+                            </div>
+                        ` : `<p class="text-sm text-gray-700">${escapeHtml(r.reasoning || "Chưa đủ dữ liệu giá thị trường.")}</p>`}
                         <p class="text-xs text-gray-500">Tình trạng: ${escapeHtml(r.condition?.grade || "Chưa xác định")}</p>
-                        ${Array.isArray(r.questions) && r.questions.length
+                        ${!serviceIssue && Array.isArray(r.questions) && r.questions.length
                             ? `<div><p class="font-semibold text-sm mb-1">Cần bổ sung</p><ul class="list-disc pl-5 text-sm">${r.questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ul></div>`
                             : ""}
-                        <p class="text-xs text-gray-500">Bổ sung thông tin vào ô "Ghi chú" bên trái rồi bấm Thử Lại.</p>
+                        ${serviceIssue ? '' : `<p class="text-xs text-gray-500">Bổ sung thông tin vào ô "Ghi chú" bên trái rồi bấm Thử Lại.</p>`}
                         ${renderAISources(r)}
                         <button onclick="runAIValuation()" class="w-full bg-brand-700 hover:bg-brand-800 text-white py-2.5 rounded-lg text-sm font-bold shadow mt-2 transition">Thử Lại</button>
                     </div>

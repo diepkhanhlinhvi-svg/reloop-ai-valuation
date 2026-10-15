@@ -27,6 +27,8 @@ curl http://localhost:3000/api/health
 ```
 
 ## Triển khai lên Vercel
+> Hướng dẫn chi tiết từng bước cho người mới: xem [DEPLOY.md](DEPLOY.md).
+
 Project đã được cấu hình theo chuẩn "Express on Vercel" (không cần `vercel.json`):
 - `server.js` export `app` → Vercel chạy thành một Vercel Function.
 - `public/` được Vercel CDN phục vụ (trên Vercel, `express.static()` bị bỏ qua).
