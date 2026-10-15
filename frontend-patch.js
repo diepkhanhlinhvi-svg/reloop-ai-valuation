@@ -20,7 +20,7 @@ async function runAIValuation() {
     renderPage();
 
     try {
-        const response = await fetch("https://api.reloopai.id.vn/api/valuate", {
+        const response = await fetch("/api/valuate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

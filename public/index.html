@@ -124,10 +124,7 @@
                 <div class="flex items-center space-x-4 flex-shrink-0">
                     <a href="#" onclick="return false;" class="hover:text-green-200 flex items-center gap-1" title="Thông báo"><i class="far fa-bell"></i> <span class="hidden md:inline">Thông báo</span></a>
                     <a href="#" onclick="return false;" class="hover:text-green-200 flex items-center gap-1" title="Hỗ trợ"><i class="far fa-question-circle"></i> <span class="hidden md:inline">Hỗ trợ</span></a>
-                    <div id="user-top-bar" class="cursor-pointer hover:text-green-200 flex items-center gap-1.5" onclick="navigateTo('profile')">
-                        <i class="far fa-user-circle text-sm"></i>
-                        <span class="font-medium hidden sm:inline">Nguyễn Văn A</span>
-                    </div>
+                    <div id="user-top-bar" class="flex items-center gap-3"></div>
                 </div>
             </div>
         </div>
@@ -243,11 +240,199 @@
             cart: [],
             categoryFilter: 'all',
             searchQuery: '',
+            user: null, // { username, name, role: 'admin' | 'user' } khi đã đăng nhập
+            demoAccounts: [], // tài khoản đăng nhập nhanh, máy chủ chỉ trả về khi bật DEMO_LOGIN
+            afterLogin: null, // trang/kênh quay lại sau khi đăng nhập
+            admin: { stats: null, loading: false, error: null },
             flashSaleEndTime: new Date().getTime() + (12 * 3600 * 1000 + 45 * 60 * 1000)
         };
 
-        // Danh sách sản phẩm khởi tạo rỗng
+        // Tin đăng tải từ máy chủ (/api/listings): gồm tin đã duyệt, cộng tin của chính mình (admin thấy tất cả)
         const products = [];
+
+        // --- API, ĐĂNG NHẬP & TIN ĐĂNG ---
+        const SERVER_HINT = 'Hãy chạy máy chủ bằng lệnh "npm run dev" rồi mở http://localhost:3000';
+
+        async function api(path, options = {}) {
+            // Mở thẳng file index.html (file://) thì không có máy chủ để gọi API
+            if (location.protocol === 'file:') throw new Error(`Không thể kết nối máy chủ. ${SERVER_HINT}`);
+            let response;
+            try {
+                response = await fetch(path, {
+                    credentials: 'same-origin',
+                    ...options,
+                    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+                });
+            } catch {
+                throw new Error(`Không thể kết nối máy chủ. ${SERVER_HINT}`);
+            }
+            let data = null;
+            try { data = await response.json(); } catch { data = null; }
+            if (!response.ok) {
+                const error = new Error((data && data.error) || `Máy chủ đang gặp sự cố (mã ${response.status}).`);
+                error.status = response.status;
+                throw error;
+            }
+            return data || {};
+        }
+
+        async function loadListings() {
+            try {
+                const data = await api('/api/listings');
+                products.splice(0, products.length, ...(data.listings || []));
+            } catch (err) {
+                console.error(err);
+                showToast('Không tải được danh sách sản phẩm', 'error');
+            }
+        }
+
+        // Chợ (mua/trao đổi) chỉ hiện tin đã được duyệt
+        function marketProducts() {
+            return products.filter(p => p.status === 'approved');
+        }
+
+        function myProducts() {
+            return state.user ? products.filter(p => p.owner === state.user.username) : [];
+        }
+
+        function canManage(p) {
+            return Boolean(state.user && (state.user.role === 'admin' || p.owner === state.user.username));
+        }
+
+        const STATUS_BADGES = {
+            approved: ['Đang hiện', 'bg-green-100 text-green-800'],
+            pending: ['Chờ duyệt', 'bg-yellow-100 text-yellow-800'],
+            rejected: ['Bị từ chối', 'bg-red-100 text-red-700']
+        };
+
+        function statusBadge(p) {
+            const [label, cls] = STATUS_BADGES[p.status] || STATUS_BADGES.pending;
+            return `<span class="${cls} text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">${label}</span>`;
+        }
+
+        function renderUserBar() {
+            const el = document.getElementById('user-top-bar');
+            if (!el) return;
+            if (!state.user) {
+                el.innerHTML = `
+                    <a href="#" onclick="promptLogin(); return false;" class="hover:text-green-200 flex items-center gap-1.5 font-medium">
+                        <i class="far fa-user-circle text-sm"></i> <span>Đăng nhập</span>
+                    </a>`;
+                return;
+            }
+            el.innerHTML = `
+                ${state.user.role === 'admin' ? `
+                    <a href="#" onclick="navigateTo('admin'); return false;" class="hover:text-yellow-200 text-yellow-300 font-semibold flex items-center gap-1" title="Quản trị">
+                        <i class="fas fa-user-shield"></i> <span class="hidden md:inline">Quản trị</span>
+                    </a>` : ''}
+                <a href="#" onclick="navigateTo('profile'); return false;" class="hover:text-green-200 flex items-center gap-1.5">
+                    <i class="far fa-user-circle text-sm"></i>
+                    <span class="font-medium hidden sm:inline">${escapeHtml(state.user.name)}</span>
+                </a>`;
+        }
+
+        function promptLogin(returnTo = null) {
+            state.afterLogin = returnTo;
+            navigateTo('login');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) btn.disabled = true;
+            try {
+                const data = await api('/api/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: document.getElementById('login-username').value,
+                        password: document.getElementById('login-password').value
+                    })
+                });
+                await finishLogin(data.user);
+            } catch (err) {
+                showToast(err.message, 'error');
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function demoLogin(username) {
+            document.querySelectorAll('.demo-login-btn').forEach(b => { b.disabled = true; });
+            try {
+                const data = await api('/api/auth/demo-login', { method: 'POST', body: JSON.stringify({ username }) });
+                await finishLogin(data.user);
+            } catch (err) {
+                showToast(err.message, 'error');
+                document.querySelectorAll('.demo-login-btn').forEach(b => { b.disabled = false; });
+            }
+        }
+
+        async function finishLogin(user) {
+            state.user = user;
+            renderUserBar();
+            await loadListings();
+            showToast(`Xin chào ${user.name}!`);
+            const target = state.afterLogin;
+            state.afterLogin = null;
+            if (target === 'seller') switchChannel('seller');
+            else if (target) navigateTo(target);
+            else navigateTo(user.role === 'admin' ? 'admin' : 'home');
+        }
+
+        async function handleLogout() {
+            try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* vẫn xóa phiên phía trình duyệt */ }
+            state.user = null;
+            state.admin = { stats: null, loading: false, error: null };
+            renderUserBar();
+            await loadListings();
+            showToast('Đã đăng xuất');
+            goToBuyerHome();
+        }
+
+        async function deleteListing(id) {
+            const item = products.find(p => p.id === id);
+            if (!item || !confirm(`Gỡ tin "${item.name}"? Thao tác này không hoàn tác được.`)) return;
+            try {
+                await api(`/api/listings/${id}`, { method: 'DELETE' });
+                products.splice(products.indexOf(item), 1);
+                showToast('Đã gỡ tin đăng');
+                if (state.currentPage === 'admin') loadAdminStats();
+                if (state.currentPage === 'detail') navigateTo('home');
+                else renderPage();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function moderateListing(id, status) {
+            try {
+                const data = await api(`/api/listings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+                const index = products.findIndex(p => p.id === id);
+                if (index >= 0) products[index] = data.listing;
+                showToast(status === 'approved' ? 'Đã duyệt tin đăng' : 'Đã từ chối tin đăng');
+                loadAdminStats();
+                renderPage();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function loadAdminStats() {
+            state.admin.loading = true;
+            state.admin.error = null;
+            try {
+                state.admin.stats = await api('/api/admin/stats');
+            } catch (err) {
+                state.admin.error = err.message;
+            } finally {
+                state.admin.loading = false;
+                if (state.currentPage === 'admin') renderPage();
+            }
+        }
+
+        async function refreshAdmin() {
+            await loadListings();
+            await loadAdminStats();
+        }
 
         const categories = [
             { id: 'all', name: 'Tất Cả', icon: 'fa-th-large' },
@@ -392,6 +577,17 @@
                 container.innerHTML = renderOrderSuccess();
                 return;
             }
+            if (state.currentPage === 'login') {
+                container.innerHTML = renderLogin();
+                return;
+            }
+            if (state.currentPage === 'admin') {
+                container.innerHTML = renderAdmin();
+                if (state.user?.role === 'admin' && !state.admin.stats && !state.admin.loading && !state.admin.error) {
+                    loadAdminStats();
+                }
+                return;
+            }
 
             // Trang chủ phân luồng theo Kênh
             switch (state.channel) {
@@ -413,7 +609,7 @@
         // 1. KÊNH NGƯỜI MUA (BUYER CHANNEL)
         // =====================================================
         function renderHome() {
-            let filtered = products.filter(p => p.type === 'buy' || p.type === 'both');
+            let filtered = marketProducts().filter(p => p.type === 'buy' || p.type === 'both');
 
             if (state.categoryFilter !== 'all') {
                 filtered = filtered.filter(p => p.category === state.categoryFilter);
@@ -424,7 +620,7 @@
                 filtered = filtered.filter(p => normalizeSearch(p.name).includes(q));
             }
 
-            const flashItems = products.filter(p => p.type === 'buy' || p.type === 'both').slice(0, 4);
+            const flashItems = marketProducts().filter(p => p.type === 'buy' || p.type === 'both').slice(0, 4);
 
             return `
                         <!-- Banners & Carousel Section -->
@@ -590,6 +786,17 @@
         // 2. KÊNH NGƯỜI BÁN (SELLER CHANNEL)
         // =====================================================
         function renderSellerChannel() {
+            if (!state.user) {
+                return `
+                        <div class="bg-white rounded-xl shadow-sm p-8 text-center max-w-lg mx-auto border border-brand-100">
+                            <div class="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-store"></i></div>
+                            <h2 class="text-base font-bold text-gray-800 mb-1">Đăng nhập để đăng bán</h2>
+                            <p class="text-xs text-gray-500 mb-5">Bạn cần đăng nhập để đăng sản phẩm lên chợ và quản lý tin của mình.</p>
+                            <button onclick="promptLogin('seller')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng nhập</button>
+                        </div>
+                    `;
+            }
+            const mine = myProducts();
             return `
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <!-- Form Upload Sản Phẩm Mới -->
@@ -669,7 +876,10 @@
                                             class="w-full border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-brand-600 outline-none"></textarea>
                                     </div>
 
-                                    <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider">
+                                    ${state.user.role !== 'admin' ? `
+                                        <p class="text-gray-500 flex items-center gap-1.5"><i class="fas fa-info-circle text-brand-600"></i> Tin đăng sẽ hiển thị trên chợ sau khi quản trị viên duyệt.</p>
+                                    ` : ''}
+                                    <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
                                         <i class="fas fa-check-circle mr-1"></i> Đăng Bán Ngay
                                     </button>
                                 </form>
@@ -685,7 +895,7 @@
                                             <div class="text-[10px] text-gray-500 uppercase font-bold">Doanh Thu</div>
                                         </div>
                                         <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                            <div class="text-lg font-black text-blue-800">${products.length}</div>
+                                            <div class="text-lg font-black text-blue-800">${mine.filter(p => p.status === 'approved').length}</div>
                                             <div class="text-[10px] text-gray-500 uppercase font-bold">Sản Phẩm Đang Đăng</div>
                                         </div>
                                     </div>
@@ -693,16 +903,19 @@
 
                                 <div class="bg-white rounded-xl shadow-sm p-5 border">
                                     <h3 class="font-bold text-sm text-gray-800 mb-3 uppercase border-b pb-2">Sản Phẩm Của Tôi</h3>
-                                    <div class="space-y-3">
-                                        ${products.length === 0 ? `<p class="text-xs text-gray-400 text-center py-3">Bạn chưa đăng sản phẩm nào.</p>` : ''}
-                                        ${products.slice(0, 4).map(p => `
+                                    <div class="space-y-3 max-h-96 overflow-y-auto">
+                                        ${mine.length === 0 ? `<p class="text-xs text-gray-400 text-center py-3">Bạn chưa đăng sản phẩm nào.</p>` : ''}
+                                        ${mine.map(p => `
                                             <div class="flex items-center gap-3 text-xs border-b pb-2 cursor-pointer hover:bg-gray-50 rounded" onclick="navigateTo('detail', ${p.id})">
                                                 <img src="${escapeHtml(p.image)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0 bg-gray-100">
                                                 <div class="flex-1 min-w-0">
                                                     <h4 class="font-semibold text-gray-800 truncate">${escapeHtml(p.name)}</h4>
                                                     <span class="text-brand-800 font-bold">${formatMoney(p.price)}</span>
                                                 </div>
-                                                <span class="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-0.5 rounded">Đang hiện</span>
+                                                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                                    ${statusBadge(p)}
+                                                    <button onclick="event.stopPropagation(); deleteListing(${p.id})" class="text-[10px] text-red-600 hover:underline">Gỡ tin</button>
+                                                </div>
                                             </div>
                                         `).join('')}
                                     </div>
@@ -753,50 +966,43 @@
             if (!name) { showToast('Vui lòng nhập tên sản phẩm', 'error'); return; }
             if (type !== 'trade' && price <= 0) { showToast('Vui lòng nhập giá bán hợp lệ', 'error'); return; }
 
-            let image = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60';
-            if (file) {
-                if (submitBtn) submitBtn.disabled = true;
-                try {
-                    image = (await compressImage(file)).dataUrl;
-                } catch (err) {
-                    showToast(err.message, 'error');
-                    if (submitBtn) submitBtn.disabled = false;
-                    return;
-                }
+            if (submitBtn) submitBtn.disabled = true;
+            try {
+                // Bỏ trống ảnh -> máy chủ dùng ảnh mặc định
+                const image = file ? (await compressImage(file)).dataUrl : '';
+                const data = await api('/api/listings', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name, price, originalPrice, type, category, desiredExchange, image,
+                        description: desc,
+                        discount: 'Mới đăng'
+                    })
+                });
+                await publishedListing(data.listing);
+            } catch (err) {
+                if (err.status === 401) { state.user = null; renderUserBar(); promptLogin('seller'); }
+                showToast(err.message, 'error');
+                if (submitBtn) submitBtn.disabled = false;
             }
+        }
 
-            const newProd = {
-                id: Date.now(),
-                name,
-                price,
-                originalPrice,
-                discount: 'Mới đăng',
-                rating: 5.0,
-                sold: '0',
-                category,
-                location: 'TP. Hồ Chí Minh',
-                type,
-                desiredExchange,
-                image,
-                variants: ['Mặc định'],
-                description: desc || 'Sản phẩm người dùng tự đăng.'
-            };
-
-            products.unshift(newProd);
+        // Sau khi đăng: tin của admin hiện ngay, tin của user chờ duyệt
+        function publishedListing(listing) {
+            products.unshift(listing);
+            if (listing.status !== 'approved') {
+                showToast('Đã gửi tin đăng! Tin sẽ hiển thị sau khi quản trị viên duyệt.');
+                switchChannel('seller');
+                return;
+            }
             showToast('Đã đăng sản phẩm thành công!');
-
-            if (type === 'trade') {
-                switchChannel('trade');
-            } else {
-                switchChannel('buyer');
-            }
+            switchChannel(listing.type === 'trade' ? 'trade' : 'buyer');
         }
 
         // =====================================================
         // 3. KÊNH TRAO ĐỔI SẢN PHẨM (TRADING CHANNEL)
         // =====================================================
         function renderTradingChannel() {
-            const tradeItems = products.filter(p => p.type === 'trade' || p.type === 'both');
+            const tradeItems = marketProducts().filter(p => p.type === 'trade' || p.type === 'both');
 
             return `
                         <div class="space-y-6">
@@ -894,6 +1100,12 @@
 
                                 <div class="flex flex-col justify-between min-w-0">
                                     <div>
+                                        ${product.status !== 'approved' ? `
+                                            <div class="mb-3 bg-yellow-50 border border-yellow-200 p-2.5 rounded-lg text-xs text-yellow-900 flex items-center gap-2">
+                                                ${statusBadge(product)}
+                                                <span>${product.status === 'rejected' ? 'Tin này đã bị từ chối và không hiển thị trên chợ.' : 'Tin này chưa hiển thị trên chợ cho tới khi được duyệt.'}</span>
+                                            </div>
+                                        ` : ''}
                                         <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-3 break-words">${escapeHtml(product.name)}</h1>
 
                                         <div class="flex items-center gap-4 text-xs mb-4 pb-4 border-b">
@@ -903,6 +1115,13 @@
                                             </div>
                                             <span class="text-gray-300">|</span>
                                             <span class="text-gray-600"><strong class="text-gray-800">${product.sold}</strong> Đã Bán</span>
+                                            ${product.ownerName ? `
+                                                <span class="text-gray-300">|</span>
+                                                <span class="text-gray-600 truncate"><i class="far fa-user"></i> ${escapeHtml(product.ownerName)}</span>
+                                            ` : ''}
+                                            ${canManage(product) ? `
+                                                <button onclick="deleteListing(${product.id})" class="ml-auto text-red-600 hover:underline whitespace-nowrap"><i class="far fa-trash-alt"></i> Gỡ tin</button>
+                                            ` : ''}
                                         </div>
 
                                         <div class="bg-green-50 p-4 rounded-xl mb-6 flex flex-wrap items-baseline gap-3">
@@ -1035,7 +1254,7 @@
         // =====================================================
         // ĐỊNH GIÁ AI & CHECKOUT (GIỮ NGUYÊN)
         // =====================================================
-        const AI_CONFIG = { endpoint: 'https://api.reloopai.id.vn/api/valuate', maxImages: 3, maxSizePx: 1024, jpegQuality: 0.85 };
+        const AI_CONFIG = { endpoint: '/api/valuate', maxImages: 3, maxSizePx: 1024, jpegQuality: 0.85 };
         state.ai = { images: [], note: '', originalPrice: '', usedFor: '', loading: false, result: null, error: null };
 
         function escapeHtml(str) {
@@ -1112,6 +1331,12 @@
                 showToast("Vui lòng tải ảnh sản phẩm trước", "error");
                 return;
             }
+            // Máy chủ (Vercel) giới hạn mỗi request khoảng 4 MB
+            const totalBase64 = ai.images.reduce((sum, img) => sum + img.base64.length, 0);
+            if (totalBase64 > 3.8 * 1024 * 1024) {
+                showToast("Tổng dung lượng ảnh quá lớn, vui lòng bớt ảnh", "error");
+                return;
+            }
             ai.loading = true;
             ai.error = null;
             ai.result = null;
@@ -1164,32 +1389,44 @@
             return hit ? hit.id : 'dien-tu';
         }
 
-        function publishAIProduct() {
+        async function publishAIProduct() {
             const r = state.ai.result;
             if (!r || !r.price) return;
-            const id = Date.now();
+            if (!state.user) {
+                showToast('Vui lòng đăng nhập để đăng bán', 'error');
+                promptLogin('ai-valuation');
+                return;
+            }
             const grade = r.condition?.grade || 'Chưa xác định';
             const score = Number.isFinite(r.condition?.score) ? ` (${r.condition.score}/100)` : '';
-            products.unshift({
-                id,
-                // Lưu dữ liệu thô; việc escape được thực hiện khi render để tránh hiển thị "&amp;"
-                name: String(r.product_name || 'Sản phẩm đã qua sử dụng'),
-                price: r.price.suggested,
-                originalPrice: Number(state.ai.originalPrice) > r.price.suggested ? Number(state.ai.originalPrice) : r.price.suggested,
-                discount: 'Đồ cũ',
-                rating: 5.0, sold: '0',
-                category: guessCategory(`${r.category || ''} ${r.product_name || ''}`),
-                location: 'TP. Hồ Chí Minh',
-                type: 'buy', desiredExchange: '',
-                image: state.ai.images[0]?.dataUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60',
-                variants: [grade],
-                description: `Tình trạng: ${grade}${score}.` +
-                    (Array.isArray(r.condition?.defects) && r.condition.defects.length ? `\nKhuyết điểm: ${r.condition.defects.join(', ')}.` : '') +
-                    (state.ai.note ? `\n${state.ai.note}` : '')
-            });
-            showToast('Đã đăng sản phẩm thành công!');
-            resetAIValuation();
-            navigateTo('detail', id);
+            try {
+                const data = await api('/api/listings', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        // Gửi dữ liệu thô; việc escape được thực hiện khi render để tránh hiển thị "&amp;"
+                        name: String(r.product_name || 'Sản phẩm đã qua sử dụng'),
+                        price: r.price.suggested,
+                        originalPrice: Number(state.ai.originalPrice) > r.price.suggested ? Number(state.ai.originalPrice) : r.price.suggested,
+                        discount: 'Đồ cũ',
+                        category: guessCategory(`${r.category || ''} ${r.product_name || ''}`),
+                        type: 'buy',
+                        image: state.ai.images[0]?.dataUrl || '',
+                        variants: [grade],
+                        description: `Tình trạng: ${grade}${score}.` +
+                            (Array.isArray(r.condition?.defects) && r.condition.defects.length ? `\nKhuyết điểm: ${r.condition.defects.join(', ')}.` : '') +
+                            (state.ai.note ? `\n${state.ai.note}` : '')
+                    })
+                });
+                resetAIValuation();
+                products.unshift(data.listing);
+                showToast(data.listing.status === 'approved'
+                    ? 'Đã đăng sản phẩm thành công!'
+                    : 'Đã gửi tin đăng! Tin sẽ hiển thị sau khi quản trị viên duyệt.');
+                navigateTo('detail', data.listing.id);
+            } catch (err) {
+                if (err.status === 401) { state.user = null; renderUserBar(); promptLogin('ai-valuation'); }
+                showToast(err.message, 'error');
+            }
         }
 
         function renderAISources(r) {
@@ -1418,12 +1655,156 @@
             navigateTo('order-success');
         }
 
+        function renderLogin() {
+            if (state.user) return renderProfile();
+            const inputCls = 'w-full border rounded-lg p-2.5 text-sm focus:ring-1 focus:ring-brand-600 outline-none';
+            return `
+                        <div class="bg-white rounded-xl shadow-sm p-6 md:p-8 max-w-sm mx-auto border border-brand-100">
+                            <div class="text-center mb-6">
+                                <div class="w-12 h-12 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-xl mx-auto mb-3"><i class="fas fa-user"></i></div>
+                                <h1 class="text-lg font-bold text-gray-800">Đăng nhập ReLoop</h1>
+                                <p class="text-xs text-gray-500 mt-1">Đăng nhập để đăng tin mua bán và trao đổi đồ.</p>
+                            </div>
+                            ${state.demoAccounts.length ? `
+                                <div class="mb-5">
+                                    <p class="text-xs font-bold text-gray-700 mb-2">Đăng nhập nhanh</p>
+                                    <div class="space-y-2">
+                                        ${state.demoAccounts.map(a => `
+                                            <button type="button" onclick="demoLogin('${escapeHtml(a.username)}')" class="demo-login-btn w-full flex items-center gap-3 border rounded-lg p-2.5 text-left hover:border-brand-600 hover:bg-brand-50 transition disabled:opacity-60">
+                                                <span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${a.role === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'bg-brand-50 text-brand-700'}">
+                                                    <i class="fas ${a.role === 'admin' ? 'fa-user-shield' : 'fa-user'}"></i>
+                                                </span>
+                                                <span class="flex-1 min-w-0">
+                                                    <span class="block text-sm font-bold text-gray-800 truncate">${escapeHtml(a.name)}</span>
+                                                    <span class="block text-[11px] text-gray-500 truncate">${escapeHtml(a.username)} · ${a.role === 'admin' ? 'Quản trị viên' : 'Người mua & bán'}</span>
+                                                </span>
+                                                <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                    <div class="flex items-center gap-3 my-5 text-[11px] text-gray-400">
+                                        <span class="flex-1 border-t"></span> hoặc nhập mật khẩu <span class="flex-1 border-t"></span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                            <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                                <div>
+                                    <label for="login-username" class="font-bold text-gray-700 block mb-1">Tên đăng nhập</label>
+                                    <input id="login-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required class="${inputCls}">
+                                </div>
+                                <div>
+                                    <label for="login-password" class="font-bold text-gray-700 block mb-1">Mật khẩu</label>
+                                    <input id="login-password" type="password" autocomplete="current-password" required class="${inputCls}">
+                                </div>
+                                <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
+                                    Đăng nhập
+                                </button>
+                            </form>
+                        </div>
+                    `;
+        }
+
         function renderProfile() {
+            if (!state.user) return renderLogin();
+            const isAdmin = state.user.role === 'admin';
             return `
                         <div class="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto text-xs space-y-3">
                             <h2 class="text-base font-bold border-b pb-2">Hồ Sơ Của Tôi</h2>
-                            <p><strong>Tên:</strong> Nguyễn Văn A</p>
-                            <p><strong>Email:</strong> nguyenvana@gmail.com</p>
+                            <p><strong>Tên:</strong> ${escapeHtml(state.user.name)}</p>
+                            <p><strong>Tên đăng nhập:</strong> ${escapeHtml(state.user.username)}</p>
+                            <p><strong>Vai trò:</strong> ${isAdmin ? 'Quản trị viên' : 'Người mua & bán'}</p>
+                            <p><strong>Tin đã đăng:</strong> ${myProducts().length}</p>
+                            <div class="flex flex-wrap gap-2 pt-3 border-t">
+                                ${isAdmin ? `<button onclick="navigateTo('admin')" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-lg transition"><i class="fas fa-user-shield mr-1"></i> Trang quản trị</button>` : ''}
+                                <button onclick="switchChannel('seller')" class="border border-brand-200 text-brand-800 font-bold px-4 py-2 rounded-lg hover:bg-brand-50 transition">Quản lý tin đăng</button>
+                                <button onclick="handleLogout()" class="border border-red-200 text-red-600 font-bold px-4 py-2 rounded-lg hover:bg-red-50 transition"><i class="fas fa-sign-out-alt mr-1"></i> Đăng xuất</button>
+                            </div>
+                        </div>
+                    `;
+        }
+
+        // =====================================================
+        // TRANG QUẢN TRỊ (ADMIN)
+        // =====================================================
+        function statTile(label, value, sub, cls) {
+            return `
+                <div class="${cls} p-3 rounded-lg border text-center">
+                    <div class="text-lg font-black">${escapeHtml(String(value))}</div>
+                    <div class="text-[10px] text-gray-500 uppercase font-bold">${label}</div>
+                    ${sub ? `<div class="text-[10px] text-gray-400 mt-0.5">${escapeHtml(sub)}</div>` : ''}
+                </div>`;
+        }
+
+        function adminListingRow(p) {
+            return `
+                <div class="flex items-center gap-3 text-xs border-b py-2">
+                    <img src="${escapeHtml(p.image)}" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${p.id})">
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-semibold text-gray-800 truncate cursor-pointer hover:text-brand-700" onclick="navigateTo('detail', ${p.id})">${escapeHtml(p.name)}</h4>
+                        <div class="text-gray-500 truncate">
+                            <span class="text-brand-800 font-bold">${formatMoney(p.price)}</span>
+                            · ${escapeHtml(p.ownerName || p.owner || '')}
+                            · ${new Date(p.createdAt).toLocaleString('vi-VN')}
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0">
+                        ${statusBadge(p)}
+                        ${p.status !== 'approved' ? `<button onclick="moderateListing(${p.id}, 'approved')" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-2.5 py-1 rounded">Duyệt</button>` : ''}
+                        ${p.status === 'pending' ? `<button onclick="moderateListing(${p.id}, 'rejected')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
+                        <button onclick="deleteListing(${p.id})" class="text-red-600 hover:underline px-1">Gỡ</button>
+                    </div>
+                </div>`;
+        }
+
+        function renderAdmin() {
+            if (!state.user) return renderLogin();
+            if (state.user.role !== 'admin') {
+                return `
+                        <div class="bg-white rounded-xl p-12 text-center text-gray-500 shadow-sm">
+                            <i class="fas fa-lock text-5xl text-gray-300 mb-3"></i>
+                            <p class="text-base font-medium">Trang này chỉ dành cho quản trị viên.</p>
+                        </div>`;
+            }
+            const { stats, loading, error } = state.admin;
+            const total = stats?.usage?.total || {};
+            const today = stats?.usage?.today || {};
+            const pending = products.filter(p => p.status === 'pending');
+            const others = products.filter(p => p.status !== 'pending');
+            const pair = (key) => `${today[key] || 0} / ${total[key] || 0}`;
+
+            return `
+                        <div class="space-y-6">
+                            <div class="bg-white rounded-xl shadow-sm p-5 border">
+                                <div class="flex flex-wrap items-center justify-between gap-3 border-b pb-3 mb-4">
+                                    <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-chart-bar text-brand-700"></i> Thống Kê Sử Dụng</h2>
+                                    <button onclick="refreshAdmin()" ${loading ? 'disabled' : ''} class="text-xs border border-brand-200 text-brand-800 font-bold px-3 py-1.5 rounded-lg hover:bg-brand-50 disabled:opacity-60">
+                                        <i class="fas fa-sync-alt ${loading ? 'animate-spin' : ''}"></i> Làm mới
+                                    </button>
+                                </div>
+                                ${error ? `<p class="text-xs text-red-600 mb-3">${escapeHtml(error)}</p>` : ''}
+                                ${stats?.storage === 'memory' ? `
+                                    <p class="text-xs bg-yellow-50 border border-yellow-200 text-yellow-900 p-2.5 rounded-lg mb-4">
+                                        <i class="fas fa-exclamation-triangle"></i> Máy chủ chưa kết nối Redis: tin đăng và thống kê sẽ mất khi máy chủ khởi động lại. Xem README để cấu hình Upstash Redis.
+                                    </p>` : ''}
+                                <p class="text-[11px] text-gray-500 mb-3">Số liệu dạng <strong>hôm nay / tổng cộng</strong> (theo giờ Việt Nam).</p>
+                                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-gray-800">
+                                    ${statTile('Lượt định giá', pair('valuations'), `Lỗi: ${pair('valuation_errors')}`, 'bg-green-50 border-brand-100')}
+                                    ${statTile('Lượt gọi Gemini', pair('gemini_calls'), '', 'bg-blue-50 border-blue-100')}
+                                    ${statTile('Lượt gọi Tavily', pair('tavily_calls'), 'Gói Free: 1.000 credit/tháng', 'bg-amber-50 border-amber-100')}
+                                    ${statTile('Lượt đăng nhập', pair('logins'), '', 'bg-gray-50 border-gray-200')}
+                                    ${statTile('Tin đăng', stats?.listings?.total ?? '—', stats ? `Chờ ${stats.listings.pending} · Duyệt ${stats.listings.approved} · Từ chối ${stats.listings.rejected}` : '', 'bg-purple-50 border-purple-100')}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm p-5 border">
+                                <h2 class="text-base font-bold text-gray-800 border-l-4 border-yellow-500 pl-3 mb-3 uppercase">Tin Chờ Duyệt (${pending.length})</h2>
+                                ${pending.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Không có tin nào đang chờ duyệt.</p>` : pending.map(adminListingRow).join('')}
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm p-5 border">
+                                <h2 class="text-base font-bold text-gray-800 border-l-4 border-brand-700 pl-3 mb-3 uppercase">Tất Cả Tin Đăng (${others.length})</h2>
+                                ${others.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Chưa có tin đăng nào.</p>` : others.map(adminListingRow).join('')}
+                            </div>
                         </div>
                     `;
         }
@@ -1470,8 +1851,25 @@
         // INITIAL LOAD — chạy ngay khi DOM sẵn sàng, không đợi tải xong toàn bộ ảnh/font
         // (tránh khoảng trắng nhấp nháy giữa header và footer lúc mới vào trang)
         updateChannelButtons();
+        renderUserBar();
         renderPage();
         updateCartBadge();
+        initSession();
+
+        // Lấy phiên đăng nhập và tin đăng từ máy chủ rồi vẽ lại
+        async function initSession() {
+            try {
+                const [me, demo] = await Promise.all([api('/api/auth/me'), api('/api/auth/demo-accounts')]);
+                state.user = me.user;
+                state.demoAccounts = demo.accounts || [];
+            } catch (err) {
+                state.user = null;
+                showToast(err.message, 'error');
+            }
+            renderUserBar();
+            await loadListings();
+            renderPage();
+        }
     </script>
 </body>
 </html>
