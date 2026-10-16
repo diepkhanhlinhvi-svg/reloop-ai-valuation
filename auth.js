@@ -69,8 +69,13 @@ export function findUserByCredentials(username, password) {
   return user && ok ? user : null;
 }
 
+// Dấu vân tay mật khẩu hiện tại: đổi mật khẩu trong AUTH_USERS thì mọi phiên cũ của tài khoản đó hết hiệu lực
+function passwordVersion(user) {
+  return sign(`pv:${user.username}:${user.password}`).slice(0, 16);
+}
+
 export function setSessionCookie(req, res, user) {
-  const payload = Buffer.from(JSON.stringify({ u: user.username, exp: Date.now() + SESSION_MAX_AGE_MS }))
+  const payload = Buffer.from(JSON.stringify({ u: user.username, v: passwordVersion(user), exp: Date.now() + SESSION_MAX_AGE_MS }))
     .toString("base64url");
   res.cookie(COOKIE_NAME, `${payload}.${sign(payload)}`, {
     httpOnly: true,
@@ -107,7 +112,8 @@ export function attachUser(req, _res, next) {
   if (payload && signature && safeEqual(signature, sign(payload))) {
     try {
       const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-      if (Number(data.exp) > Date.now()) req.user = users.get(data.u) || null;
+      const user = users.get(data.u);
+      if (user && Number(data.exp) > Date.now() && data.v === passwordVersion(user)) req.user = user;
     } catch {
       // cookie hỏng -> coi như chưa đăng nhập
     }
