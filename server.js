@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import express from "express";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -9,6 +11,7 @@ import {
 } from "./auth.js";
 import { store, storeMode, trackStat } from "./store.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 // gemini-2.5-* đã đóng với người dùng mới; dùng dòng Gemini 3.x
@@ -847,6 +850,12 @@ app.post("/api/valuate", valuationLimiter, async (req, res) => {
 // API không tồn tại -> trả JSON thay vì trang HTML mặc định của Express
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Không tìm thấy API." });
+});
+
+// Trang chủ: trả index.html trực tiếp để Vercel đóng gói file này vào Function
+// (nếu request "/" lọt vào Express mà không có route này sẽ báo "Cannot GET /").
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // Lỗi từ middleware (JSON sai cú pháp, body quá lớn...) -> luôn trả JSON tiếng Việt
