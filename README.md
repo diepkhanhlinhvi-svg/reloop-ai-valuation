@@ -43,30 +43,41 @@ Các bước:
    - `TAVILY_API_KEY`
    - `TAVILY_SEARCH_DEPTH` = `basic`
    - `AUTH_USERS` và `AUTH_SECRET` (copy y nguyên từ `.env`, xem mục **Tài khoản** bên dưới)
-   - `UPSTASH_REDIS_REST_URL` và `UPSTASH_REDIS_REST_TOKEN` (xem mục **Lưu tin đăng trên Vercel**)
-4. Deploy. Kiểm tra `https://<tên-project>.vercel.app/api/health` phải trả `geminiConfigured: true` và `marketSearchConfigured: true`.
+   - `DATABASE_URL` và `BLOB_READ_WRITE_TOKEN`: không cần gõ tay, Vercel tự thêm khi gắn Neon và Blob (xem mục **Database**)
+4. Deploy. Kiểm tra `https://<tên-project>.vercel.app/api/health` phải trả `geminiConfigured`, `marketSearchConfigured`, `databaseConfigured`, `imageStorageConfigured` đều là `true`.
 5. Mỗi lần đổi biến môi trường cần **Redeploy** để có hiệu lực.
 
 Giới hạn cần biết trên Vercel:
 - Body request tối đa 4,5 MB: frontend đã nén ảnh về 1024px và chặn khi tổng dung lượng quá lớn.
-- Rate limit trong `server.js` (20 lần/15 phút/IP) lưu trong bộ nhớ của từng instance nên chỉ mang tính tương đối. Để chống spam thật sự, bật thêm rate limit trong **Vercel Firewall**.
+- Rate limit (định giá 20 lần, đăng nhập 10 lần, thao tác ghi 60 lần / 15 phút / IP) lưu trong database nên dùng chung cho mọi instance. Database lỗi thì rate limit tạm cho qua thay vì chặn cả trang.
+- Mỗi lần định giá có tối đa 55 giây; quá thời gian thì báo lỗi rõ ràng thay vì để Vercel cắt ngang.
 - Không đặt `FRONTEND_ORIGIN` khi frontend và API cùng domain trên Vercel.
 
 ## Tài khoản
 Không có đăng ký: tài khoản khai báo sẵn trong biến `AUTH_USERS` (JSON), mỗi tài khoản gồm `username`, `password`, `role` (`admin` | `user`), `name`.
 - **user**: đăng tin bán/trao đổi (chờ admin duyệt mới hiện lên chợ), gỡ tin của mình.
 - **admin**: tin đăng hiện ngay; trang **Quản trị** để duyệt/từ chối/gỡ mọi tin và xem thống kê (lượt định giá, lượt gọi Gemini/Tavily, đăng nhập, số tin).
-- Mua hàng, định giá AI không cần đăng nhập.
+- Định giá AI và xem chợ không cần đăng nhập; đặt hàng và gửi đề nghị đổi cần đăng nhập.
 - `DEMO_LOGIN=true` hiện nút đăng nhập nhanh từng tài khoản (không cần mật khẩu) ở trang đăng nhập. Dự án này bật cả trên Vercel để công khai 3 tài khoản (ai cũng vào được admin, chấp nhận vì là dự án cá nhân).
-- Thêm/đổi mật khẩu: sửa `AUTH_USERS` rồi khởi động lại server (trên Vercel: Redeploy). Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
+- Thêm/đổi mật khẩu: sửa `AUTH_USERS` rồi khởi động lại server (trên Vercel: Redeploy). Phiên đăng nhập cũ của tài khoản bị đổi mật khẩu tự hết hiệu lực. Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
 
-## Lưu tin đăng trên Vercel
-Vercel không giữ file giữa các lần chạy, nên tin đăng và thống kê cần Redis:
-1. Vercel → project → **Storage** → **Upstash for Redis** (gói Free), hoặc tạo database tại https://upstash.com.
-2. Thêm `UPSTASH_REDIS_REST_URL` và `UPSTASH_REDIS_REST_TOKEN` (tích hợp Vercel tự thêm `KV_REST_API_URL`/`KV_REST_API_TOKEN`, cũng được nhận).
-3. Redeploy. `/api/health` phải trả `"storage": "redis"`.
+## Database
+- **Neon Postgres** (Vercel → Storage → Neon, gói Free) lưu tin đăng, đơn hàng, đề nghị trao đổi, thống kê và bộ đếm rate limit. Biến `DATABASE_URL`.
+  Bảng được tạo tự động ở lần truy vấn đầu tiên (`lib/schema.js`); muốn thêm cột thì thêm câu `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` vào cuối danh sách.
+- **Vercel Blob** (Vercel → Storage → Blob) lưu ảnh tin đăng; database chỉ giữ URL ảnh. Biến `BLOB_READ_WRITE_TOKEN`.
+- Chạy local cũng cần hai biến này: `npx vercel env pull .env.development.local` rồi chép sang `.env` (xem DEPLOY.md, Phần 4.3).
 
-Chạy local không có Redis thì dữ liệu lưu vào `data/db.json` (đã nằm trong `.gitignore`). Trên Vercel mà thiếu Redis, dữ liệu chỉ nằm trong bộ nhớ và sẽ mất; trang Quản trị sẽ hiện cảnh báo.
+Mua bán và trao đổi (mỗi tin là **một món** đồ cũ):
+- Đặt hàng giữ chỗ món đồ ngay trong một transaction có khóa dòng: hai người không thể mua trùng một món. Giá lấy từ database, không tin giá trình duyệt gửi lên.
+- Quy trình escrow: `pending` (chờ người bán xác nhận) → `confirmed` (đang giao) → `completed` (người mua bấm "Đã nhận hàng", món đồ thành "đã bán"). Trước khi hoàn tất, người mua, người bán hoặc admin đều hủy được; hủy thì món đồ quay lại chợ.
+- Đề nghị trao đổi: người đăng tin chấp nhận một đề nghị thì món đồ thành "đã đổi" và các đề nghị khác tự bị từ chối. Không chấp nhận được khi món đang có đơn mua.
+- Không gỡ được tin đang có đơn chờ xử lý.
+
+## Test
+```bash
+npm test
+```
+Test chạy trên Postgres trong bộ nhớ (PGlite) và Blob giả, không cần mạng hay database thật.
 
 ## Hạn mức và chi phí
 Mỗi lần định giá tốn 2 lần gọi Gemini (nhận diện ảnh + lọc kết quả) và 2 truy vấn Tavily.
@@ -77,6 +88,22 @@ Mỗi lần định giá tốn 2 lần gọi Gemini (nhận diện ảnh + lọc
 
 ## API
 `POST /api/valuate` nhận `images: [{ base64, mediaType }]` (1–3 ảnh), `note`, `originalPrice`, `usedFor`.
+Chỉ định giá khi AI xác định được model với `identification_confidence` ≥ 0,6; nếu chưa chắc, API trả `price: null`,
+`price_unavailable_reason: "missing_model"` kèm câu hỏi để người dùng ghi rõ model/dung lượng.
+
+| API | Ai dùng | Việc |
+|---|---|---|
+| `GET /api/listings` | mọi người | Tin đã duyệt còn bán (+ tin của mình; admin thấy hết) |
+| `POST /api/listings` | đăng nhập | Đăng tin (`image` là data URL, được tải lên Blob) |
+| `PATCH /api/listings/:id` | admin | Duyệt / từ chối |
+| `DELETE /api/listings/:id` | chủ tin, admin | Gỡ tin |
+| `POST /api/orders` | đăng nhập | `{ items: [{ listingId, variant }], phone, address, note }`; 409 kèm `unavailable` nếu có món không còn |
+| `GET /api/orders` | đăng nhập | `{ purchases, sales }` (admin thêm `?scope=all`) |
+| `PATCH /api/orders/:id` | người trong đơn, admin | `{ action: "confirm" \| "complete" \| "cancel" }` |
+| `POST /api/listings/:id/offers` | đăng nhập | `{ offeredItem, message }` |
+| `GET /api/offers` | đăng nhập | `{ received, sent }` |
+| `PATCH /api/offers/:id` | chủ tin / người gửi | `{ action: "accept" \| "reject" \| "withdraw" }` |
+
 Lỗi luôn trả JSON `{ "error": "..." }` bằng tiếng Việt.
 
 ## Quan trọng về chất lượng giá

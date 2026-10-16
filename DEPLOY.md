@@ -114,30 +114,42 @@ Các key trong file `.env` **không** được tải lên (để bảo mật), n
 > 💡 **Cách nhanh:** Vercel cho phép dán cả nội dung `.env` một lần: mở `.env`, `Ctrl + A`, `Ctrl + C`,
 > rồi bấm vào ô **Key** đầu tiên trên Vercel và `Ctrl + V`. Vercel tự tách thành nhiều dòng.
 > **Sau đó nhớ bấm dấu trừ/thùng rác để xóa** các dòng `PORT`, `FRONTEND_ORIGIN`,
-> `UPSTASH_...` đang để trống, rồi mới **Save**.
+> `DATABASE_URL`, `BLOB_READ_WRITE_TOKEN` (hai biến này do Phần 4 tự tạo), rồi mới **Save**.
 
 ---
 
-## Phần 4. Gắn Redis để lưu tin đăng (bắt buộc nếu muốn tin đăng không bị mất)
+## Phần 4. Gắn database Neon và kho ảnh Blob (bắt buộc)
 
-Vercel không giữ file trên máy chủ, nên tin đăng và thống kê phải lưu ở **Upstash Redis** (miễn phí).
+Vercel không giữ file trên máy chủ, nên tin đăng, đơn hàng, đề nghị trao đổi và thống kê lưu ở
+**Neon Postgres**, còn ảnh tin đăng lưu ở **Vercel Blob**. Cả hai đều có gói miễn phí và tạo ngay trong Vercel.
+Bảng trong database được máy chủ **tự tạo** ở lần chạy đầu tiên, không cần chạy lệnh nào.
 
-1. Trong project trên Vercel, bấm tab **Storage**.
-2. Bấm **Create Database** (hoặc **Browse Marketplace**) → chọn **Upstash** → **Upstash for Redis** → **Continue**.
-3. Bấm đồng ý điều khoản (**Accept and Create** / **Install**).
-4. Cấu hình:
-   - **Primary Region**: chọn **Singapore (ap-southeast-1)** (gần Việt Nam nhất, nhanh nhất).
-   - **Plan**: chọn **Free**.
-   - **Database name**: gõ `reloop-db` → bấm **Create**.
-5. Màn hình hỏi kết nối với project nào → chọn **reloop-ai-valuation**, tick cả 3 môi trường → **Connect**.
-6. Kiểm tra: quay lại **Settings → Environment Variables**, phải thấy các biến mới tên `KV_REST_API_URL`
-   và `KV_REST_API_TOKEN` (hoặc `UPSTASH_REDIS_REST_URL` và `UPSTASH_REDIS_REST_TOKEN`). Có một trong hai cặp là được, code đã hỗ trợ cả hai.
+**4.1 – Neon Postgres**
+1. Trong project trên Vercel, bấm tab **Storage** → **Create Database** → chọn **Neon** → **Continue**.
+2. Bấm đồng ý điều khoản (**Accept and Create**).
+3. **Region**: chọn **Singapore (ap-southeast-1)**. **Plan**: **Free**. **Database name**: `reloop-db` → **Create**.
+4. Màn hình hỏi kết nối với project nào → chọn **reloop-ai-valuation**, tick cả 3 môi trường → **Connect**.
+5. Kiểm tra: **Settings → Environment Variables** phải có biến `DATABASE_URL`.
+
+**4.2 – Vercel Blob**
+1. Tab **Storage** → **Create Database** → chọn **Blob** → **Continue**.
+2. Đặt tên `reloop-images` → **Create** → chọn project **reloop-ai-valuation**, tick cả 3 môi trường → **Connect**.
+3. Kiểm tra: **Settings → Environment Variables** phải có biến `BLOB_READ_WRITE_TOKEN`.
+
+**4.3 – Dùng cùng database khi chạy trên máy**
+Trong Terminal ở thư mục dự án:
+```
+npx vercel env pull .env.development.local
+```
+Mở file vừa tạo, copy 2 dòng `DATABASE_URL=...` và `BLOB_READ_WRITE_TOKEN=...` sang file `.env`, rồi xóa file
+`.env.development.local`. (Muốn dữ liệu thử không lẫn với web thật: trong trang Neon tạo thêm một **branch** `dev`
+và dùng chuỗi kết nối của branch đó cho `.env`.)
 
 ---
 
 ## Phần 5. (Khuyên làm) Cho máy chủ chạy ở Singapore
 
-Mặc định máy chủ Vercel chạy ở Mỹ, gọi qua Redis ở Singapore sẽ chậm.
+Mặc định máy chủ Vercel chạy ở Mỹ, gọi qua database ở Singapore sẽ chậm.
 
 1. **Settings** → cột trái chọn **Functions**.
 2. Mục **Function Region** chọn **Singapore, Southeast (sin1)** → **Save**.
@@ -176,7 +188,8 @@ Phải thấy đủ các giá trị sau:
 | `geminiConfigured` | `true` | Thiếu `GEMINI_API_KEY` (Phần 3) |
 | `marketSearchConfigured` | `true` | Thiếu `TAVILY_API_KEY` (Phần 3) |
 | `authConfigured` | `true` | Thiếu `AUTH_USERS` hoặc `AUTH_SECRET` (Phần 3) |
-| `storage` | `"redis"` | Chưa gắn Redis (Phần 4). Nếu là `"memory"` thì tin đăng sẽ bị mất |
+| `databaseConfigured` | `true` | Chưa gắn Neon (Phần 4.1) |
+| `imageStorageConfigured` | `true` | Chưa gắn Blob (Phần 4.2), đăng tin kèm ảnh sẽ báo lỗi |
 
 Sửa xong nhớ chạy lại `npx vercel --prod`.
 
@@ -187,7 +200,11 @@ Sửa xong nhớ chạy lại `npx vercel --prod`.
 3. Vào **Kênh Người Bán** → đăng thử 1 sản phẩm → thấy thông báo "chờ quản trị viên duyệt".
 4. Đăng xuất (bấm tên ở góc trên phải → **Đăng xuất**), đăng nhập `admin` → vào **Quản trị** → bấm **Duyệt**.
 5. Đăng xuất, quay về trang chủ → sản phẩm phải hiện ra cho mọi người.
-6. Vào **Định giá AI**, tải 1 ảnh thử → phải ra kết quả (chờ khoảng 10–30 giây).
+6. Đăng nhập `user2` → mở sản phẩm → **Mua Ngay** → nhập SĐT, địa chỉ → **Xác Nhận Đặt Hàng**.
+   Sản phẩm phải biến khỏi chợ (đã có người đặt).
+7. Đăng nhập `user1` → **Đơn hàng** (góc trên phải) → tab **Đơn bán** → **Xác nhận giao**.
+8. Đăng nhập `user2` → **Đơn hàng** → **Đã nhận hàng**. Tin của user1 chuyển sang "Đã bán", doanh thu ở Kênh Người Bán tăng.
+9. Vào **Định giá AI**, tải 1 ảnh thử → phải ra kết quả (chờ khoảng 10–30 giây).
 
 ---
 
@@ -231,7 +248,9 @@ Project → tab **Logs** (lỗi khi đang chạy) hoặc tab **Deployments** →
 | Deploy báo `Error: No Output Directory` hoặc trang trắng | Vercel nhận nhầm loại dự án | **Settings → Build and Deployment → Framework Preset** chọn **Express** → Save → `npx vercel --prod` |
 | Đăng nhập báo "Tên đăng nhập hoặc mật khẩu không đúng" dù gõ đúng | `AUTH_USERS` dán thiếu ký tự / có dấu ngoặc kép thừa ở đầu cuối | Edit lại biến, giá trị phải bắt đầu bằng `[` và kết thúc bằng `]` → deploy lại |
 | Đăng nhập xong một lúc lại bị đăng xuất | Thiếu `AUTH_SECRET` | Thêm `AUTH_SECRET` → deploy lại |
-| Tin đăng biến mất sau một lúc | Chưa gắn Redis, `storage` đang là `memory` | Làm Phần 4 → deploy lại |
+| "Máy chủ chưa kết nối database" | Thiếu `DATABASE_URL` | Làm Phần 4.1 → deploy lại |
+| "Máy chủ chưa cấu hình nơi lưu ảnh" khi đăng tin | Thiếu `BLOB_READ_WRITE_TOKEN` | Làm Phần 4.2 → deploy lại |
+| "Món này đang có đơn hàng chờ xử lý" khi gỡ tin | Món đồ đang được giữ cho người mua | Hoàn tất hoặc hủy đơn ở mục **Đơn hàng** rồi gỡ |
 | Định giá báo "Đã hết lượt dùng Gemini" | Hết hạn mức miễn phí trong ngày của Gemini | Chờ tới khoảng 14h–15h hôm sau (giờ VN) hạn mức tự reset |
 | Định giá báo "Đã hết lượt tìm giá thị trường (Tavily)" | Hết 1.000 credit/tháng | Chờ sang tháng, hoặc tạo key Tavily mới, xem số đã dùng ở trang **Quản trị** |
 | "Bạn đã gửi quá nhiều yêu cầu" | Chống spam: 20 lần định giá / 15 phút / người | Chờ 15 phút |
@@ -244,7 +263,7 @@ Project → tab **Logs** (lỗi khi đang chạy) hoặc tab **Deployments** →
 1. `npx vercel login` (1 lần)
 2. `npx vercel` (1 lần, tạo project)
 3. Thêm 6 biến môi trường trên Vercel (+ `DEMO_LOGIN=true` để công khai 3 tài khoản)
-4. Storage → Upstash for Redis → Connect
+4. Storage → Neon (Postgres) → Connect, và Storage → Blob → Connect
 5. (Tùy chọn) Functions → Region Singapore
 6. `npx vercel --prod`
 7. Mở `/api/health` kiểm tra
