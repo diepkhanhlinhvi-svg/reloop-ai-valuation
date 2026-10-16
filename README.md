@@ -57,7 +57,7 @@ Không có đăng ký: tài khoản khai báo sẵn trong biến `AUTH_USERS` (J
 - **user**: đăng tin bán/trao đổi (chờ admin duyệt mới hiện lên chợ), gỡ tin của mình.
 - **admin**: tin đăng hiện ngay; trang **Quản trị** để duyệt/từ chối/gỡ mọi tin và xem thống kê (lượt định giá, lượt gọi Gemini/Tavily, đăng nhập, số tin).
 - Mua hàng, định giá AI không cần đăng nhập.
-- `DEMO_LOGIN=true` hiện nút đăng nhập nhanh từng tài khoản (không cần mật khẩu) ở trang đăng nhập. Chỉ bật khi chạy thử trên máy, **không** thêm biến này lên Vercel vì ai cũng vào được admin.
+- `DEMO_LOGIN=true` hiện nút đăng nhập nhanh từng tài khoản (không cần mật khẩu) ở trang đăng nhập. Dự án này bật cả trên Vercel để công khai 3 tài khoản (ai cũng vào được admin, chấp nhận vì là dự án cá nhân).
 - Thêm/đổi mật khẩu: sửa `AUTH_USERS` rồi khởi động lại server (trên Vercel: Redeploy). Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
 
 ## Lưu tin đăng trên Vercel

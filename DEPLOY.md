@@ -101,19 +101,19 @@ Các key trong file `.env` **không** được tải lên (để bảo mật), n
 | `TAVILY_SEARCH_DEPTH` | gõ `basic` | ✅ |
 | `AUTH_USERS` | dòng `AUTH_USERS=` trong `.env`. Copy **nguyên cả dòng sau dấu `=`**, bắt đầu bằng `[` và kết thúc bằng `]` | ✅ |
 | `AUTH_SECRET` | dòng `AUTH_SECRET=` trong `.env` | ✅ |
+| `DEMO_LOGIN` | gõ `true` để công khai 3 tài khoản: trang đăng nhập hiện nút đăng nhập nhanh admin/user1/user2, không cần mật khẩu (dự án cá nhân nên chấp nhận việc ai cũng vào được admin) | Tùy chọn |
 
 **KHÔNG thêm** các biến sau lên Vercel:
 
 | Không thêm | Lý do |
 |---|---|
-| `DEMO_LOGIN` | Bật lên thì **ai cũng bấm vào được tài khoản admin** mà không cần mật khẩu |
 | `PORT` | Vercel tự quản lý |
 | `FRONTEND_ORIGIN` | Chỉ cần khi web và API ở 2 tên miền khác nhau |
 | `VERCEL_TOKEN` (nếu có) | Đây là chìa khóa tài khoản Vercel của bạn, không phải cấu hình web |
 
 > 💡 **Cách nhanh:** Vercel cho phép dán cả nội dung `.env` một lần: mở `.env`, `Ctrl + A`, `Ctrl + C`,
 > rồi bấm vào ô **Key** đầu tiên trên Vercel và `Ctrl + V`. Vercel tự tách thành nhiều dòng.
-> **Sau đó nhớ bấm dấu trừ/thùng rác để xóa** các dòng `DEMO_LOGIN`, `PORT`, `FRONTEND_ORIGIN`,
+> **Sau đó nhớ bấm dấu trừ/thùng rác để xóa** các dòng `PORT`, `FRONTEND_ORIGIN`,
 > `UPSTASH_...` đang để trống, rồi mới **Save**.
 
 ---
@@ -182,8 +182,8 @@ Sửa xong nhớ chạy lại `npx vercel --prod`.
 
 ### 7.2 – Kiểm tra các chức năng
 
-1. Mở link web → bấm **Đăng nhập** (góc trên phải). Trên web thật **không có** 3 nút đăng nhập nhanh, đó là đúng.
-2. Đăng nhập `user1` với mật khẩu lấy trong `AUTH_USERS` ở file `.env` (phần `"password":"..."` của user1).
+1. Mở link web → bấm **Đăng nhập** (góc trên phải). Nếu đã thêm `DEMO_LOGIN=true` sẽ thấy 3 nút đăng nhập nhanh admin/user1/user2.
+2. Bấm nút đăng nhập nhanh `user1` (hoặc gõ `user1` với mật khẩu lấy trong `AUTH_USERS` ở file `.env`, phần `"password":"..."` của user1).
 3. Vào **Kênh Người Bán** → đăng thử 1 sản phẩm → thấy thông báo "chờ quản trị viên duyệt".
 4. Đăng xuất (bấm tên ở góc trên phải → **Đăng xuất**), đăng nhập `admin` → vào **Quản trị** → bấm **Duyệt**.
 5. Đăng xuất, quay về trang chủ → sản phẩm phải hiện ra cho mọi người.
@@ -243,7 +243,7 @@ Project → tab **Logs** (lỗi khi đang chạy) hoặc tab **Deployments** →
 
 1. `npx vercel login` (1 lần)
 2. `npx vercel` (1 lần, tạo project)
-3. Thêm 6 biến môi trường trên Vercel (không thêm `DEMO_LOGIN`)
+3. Thêm 6 biến môi trường trên Vercel (+ `DEMO_LOGIN=true` để công khai 3 tài khoản)
 4. Storage → Upstash for Redis → Connect
 5. (Tùy chọn) Functions → Region Singapore
 6. `npx vercel --prod`
