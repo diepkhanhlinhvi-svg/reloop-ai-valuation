@@ -1,6 +1,42 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPriceEstimate, extractPrices, normalizeText } from "../lib/pricing.js";
+import { buildNewPriceEstimate, buildPriceEstimate, extractPrices, normalizeText } from "../lib/pricing.js";
+import { identificationGate } from "../lib/valuation.js";
+
+test("đồ thông dụng không có model vẫn được định giá, không hỏi lại", () => {
+  const gate = identificationGate({ model_matters: false, model: null, identification_confidence: 0.8 });
+  assert.equal(gate.action, "price");
+  assert.equal(gate.modelAssumed, false);
+});
+
+test("đồ có model mà AI chưa chắc: vẫn định giá theo model AI đoán, đánh dấu để người dùng sửa", () => {
+  const gate = identificationGate({ model_matters: true, model: "iPhone 17 Pro", identification_confidence: 0.5 });
+  assert.equal(gate.action, "price");
+  assert.equal(gate.modelAssumed, true);
+  assert.equal(identificationGate({ model_matters: true, model: "iPhone 17 Pro", identification_confidence: 0.9 }).modelAssumed, false);
+});
+
+test("chỉ hỏi lại khi không đoán được model hoặc không nhận ra sản phẩm", () => {
+  assert.equal(identificationGate({ model_matters: true, model: null, identification_confidence: 0.9 }).action, "ask");
+  assert.equal(identificationGate({ model_matters: false, identification_confidence: 0.1 }).action, "ask");
+});
+
+test("extractPrices nhận giá đồ rẻ vài nghìn đồng", () => {
+  assert.deepEqual(extractPrices("Bút lông dầu Thiên Long giá 8.000đ"), [8_000]);
+  assert.deepEqual(extractPrices("chỉ 5k một cây"), [5_000]);
+});
+
+test("không có tin rao đồ cũ thì ước tính từ giá bán mới theo tình trạng", () => {
+  const sources = [
+    { title: "A", url: "https://a", content: "", prices: [], newPrices: [8_000] },
+    { title: "B", url: "https://b", content: "", prices: [], newPrices: [9_000, 10_000] }
+  ];
+  assert.equal(buildPriceEstimate({}, sources, null).price, null, "không có giá đồ cũ");
+  const estimate = buildNewPriceEstimate({ visible_condition: { grade: "Tốt" } }, sources, null);
+  assert.equal(estimate.stats.new_price_median, 9_000);
+  assert.equal(estimate.price.suggested, 6_000); // 9.000 × 0,65 = 5.850 → làm tròn 500đ
+  assert.ok(estimate.price.min <= estimate.price.suggested && estimate.price.suggested <= estimate.price.max);
+});
 
 test("extractPrices đọc đúng các cách viết giá phổ biến", () => {
   const cases = [

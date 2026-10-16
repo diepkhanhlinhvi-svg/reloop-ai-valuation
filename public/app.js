@@ -1171,6 +1171,35 @@ function updateAIField(field, value) {
     state.ai[field] = value;
 }
 
+// Sửa model AI đoán sai chỉ bằng một chạm: ghi model vào đầu ô Ghi chú rồi định giá lại
+function revaluateWithModel(model) {
+    const value = String(model || '').trim();
+    if (!value) return;
+    const rest = state.ai.note.replace(/^Model: .*(\n|$)/, '');
+    state.ai.note = `Model: ${value}${rest ? `\n${rest}` : ''}`;
+    runAIValuation();
+}
+
+// Khung "AI đoán là X": các model khác có thể là, kèm ô tự gõ model đúng
+function renderModelFix(r) {
+    const candidates = (Array.isArray(r.model_candidates) ? r.model_candidates : [])
+        .filter(m => m && m !== r.model).slice(0, 3);
+    if (!r.model_assumed && !(r.requires_more_info && candidates.length)) return '';
+    return `
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-2">
+            <p class="text-amber-900">${r.model
+                ? `AI đoán đây là <strong>${escapeHtml(r.model)}</strong> (độ chắc chắn ${Math.round((r.identification_confidence || 0) * 100)}%). Không đúng? Chọn model khác:`
+                : 'Có thể là một trong các model sau:'}</p>
+            <div class="flex flex-wrap gap-1.5">
+                ${candidates.map(m => `<button type="button" data-model="${escapeHtml(m)}" onclick="revaluateWithModel(this.dataset.model)" class="bg-white border border-amber-300 text-amber-900 font-semibold px-2.5 py-1 rounded-full hover:bg-amber-100">${escapeHtml(m)}</button>`).join('')}
+            </div>
+            <form onsubmit="event.preventDefault(); revaluateWithModel(this.model.value)" class="flex gap-1.5">
+                <input name="model" type="text" maxlength="100" placeholder="Hoặc gõ model đúng, vd: iPhone 17 Pro 256GB" class="flex-1 min-w-0 border rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-amber-500 outline-none">
+                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg whitespace-nowrap">Định giá lại</button>
+            </form>
+        </div>`;
+}
+
 async function runAIValuation() {
     const ai = state.ai;
     if (ai.loading) return; // chống bấm nhiều lần gửi trùng request
@@ -1320,6 +1349,7 @@ function renderAIResult() {
                     </div>
                 ` : `<p class="text-sm text-gray-700">${escapeHtml(r.reasoning || "Chưa đủ dữ liệu giá thị trường.")}</p>`}
                 <p class="text-xs text-gray-500">Tình trạng: ${escapeHtml(r.condition?.grade || "Chưa xác định")}</p>
+                ${serviceIssue ? '' : renderModelFix(r)}
                 ${!serviceIssue && Array.isArray(r.questions) && r.questions.length
                     ? `<div><p class="font-semibold text-sm mb-1">Cần bổ sung</p><ul class="list-disc pl-5 text-sm">${r.questions.map(q => `<li>${escapeHtml(q)}</li>`).join("")}</ul></div>`
                     : ""}
@@ -1337,10 +1367,13 @@ function renderAIResult() {
                 <p class="text-xs text-green-100 uppercase">Giá Gợi Ý</p>
                 <p class="text-3xl font-black mt-1">${formatMoney(r.price.suggested)}</p>
                 <p class="text-xs text-green-100 mt-1">Khoảng giá: ${formatMoney(r.price.min)} – ${formatMoney(r.price.max)}</p>
+                ${r.price_basis === 'new_price_depreciated' ? `<p class="text-[11px] mt-2 inline-block bg-black/20 px-2 py-0.5 rounded">Ước tính từ giá bán mới (chưa có tin rao đồ cũ)</p>` : ''}
             </div>
             <div class="p-5 space-y-4 text-sm">
                 <h3 class="font-bold text-gray-800">${escapeHtml(r.product_name)}</h3>
                 <div class="text-xs text-gray-600"><span class="font-semibold">Tình trạng:</span> ${escapeHtml(grade)}${score}</div>
+                ${renderModelFix(r)}
+                ${Array.isArray(r.questions) && r.questions.length ? `<p class="text-xs text-gray-500">Để giá sát hơn: ${r.questions.map(escapeHtml).join(' ')}</p>` : ''}
                 <p class="text-xs text-gray-500">${escapeHtml(r.reasoning || "")}</p>
                 ${renderAISources(r)}
                 <button onclick="publishAIProduct()" class="w-full bg-brand-700 hover:bg-brand-800 text-white py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng Bán Với Giá Này</button>
