@@ -141,6 +141,8 @@ Phân tích CHỈ những gì có căn cứ từ ảnh và thông tin người d
 Nếu ghi chú của người dùng nêu rõ thương hiệu/model và không mâu thuẫn với ảnh, hãy dùng đúng thương hiệu/model đó
 (điền vào "brand", "model" và đưa vào "product_name", ví dụ "Tai nghe Sony WH-1000XM4").
 Nếu cả ảnh lẫn ghi chú đều chưa đủ căn cứ xác định model, hãy ghi null và nêu câu hỏi cần hỏi người dùng.
+Phân biệt kỹ các phiên bản trông gần giống nhau dựa trên chi tiết nhìn thấy (số lượng/bố cục camera, kích thước, màu đặc trưng, chữ trên máy),
+ví dụ iPhone 17 / 17 Pro / 17 Pro Max / iPhone Air. Dung lượng, RAM thường không nhìn thấy từ ảnh: không đoán, hãy hỏi người dùng.
 Đánh giá ngoại hình nhìn thấy được; không được khẳng định chức năng bên trong hoạt động nếu ảnh không chứng minh được.
 Trả về JSON thuần theo cấu trúc:
 {
@@ -312,7 +314,8 @@ export function searchQueries(product) {
   ];
 }
 
-// Gemini chỉ CHỌN kết quả nào đúng sản phẩm; giá được trích xuất riêng bằng code từ nội dung nguồn.
+// Giá được trích xuất bằng code từ nội dung nguồn; Gemini chỉ CHỌN trong các giá đó những giá thuộc đúng sản phẩm
+// (một trang thường liệt kê nhiều model/phiên bản, giá máy mới, phụ kiện... nên không thể lấy mọi giá trên trang).
 async function selectComparableSources(product, searchResults) {
   if (!searchResults.length) return { sources: [], method: "ai" };
 
@@ -324,9 +327,14 @@ async function selectComparableSources(product, searchResults) {
     visible_prices: extractPrices(`${r.title} ${r.content}`)
   }));
 
-  const prompt = `Chọn các kết quả có khả năng là cùng sản phẩm hoặc đúng model để tham khảo giá đồ cũ tại Việt Nam.
-Chỉ chọn khi có bằng chứng đủ phù hợp; ưu tiên đúng model/phiên bản. Loại trang không liên quan, bài hướng dẫn chung, phụ kiện riêng, sản phẩm khác model và giá không rõ ngữ cảnh.
-Không suy đoán giá. Chỉ trả JSON {"relevant_indexes":[số nguyên,...]}.
+  const prompt = `Bạn lọc giá tham khảo đồ cũ tại Việt Nam cho đúng một sản phẩm.
+Mỗi kết quả tìm kiếm có "visible_prices" là các con số đã được trích từ snippet. Với từng kết quả, đọc ngữ cảnh trong snippet và CHỈ giữ những giá trong visible_prices là giá bán máy CŨ/đã qua sử dụng của ĐÚNG model sản phẩm.
+Quy tắc:
+- Đúng dòng máy: các phiên bản khác nhau là sản phẩm khác (vd iPhone 17 khác iPhone 17 Pro, 17 Pro Max, iPhone Air, iPhone 16; Galaxy S24 khác S24 Ultra).
+- Nếu sản phẩm đã rõ dung lượng/cấu hình thì chỉ lấy giá đúng dung lượng đó; nếu chưa rõ thì chấp nhận mọi dung lượng của đúng model.
+- Loại: giá máy mới/niêm yết, số tiền giảm, giá trả góp theo tháng, giá thu mua lại, giá phụ kiện, giá của model khác, khoảng giá chung cho cả dòng sản phẩm, con số không rõ thuộc sản phẩm nào.
+- Không tự tạo hay làm tròn giá: mọi số trả về phải chép nguyên từ visible_prices của chính kết quả đó. Kết quả không có giá phù hợp thì bỏ qua.
+Chỉ trả JSON {"matches":[{"index":số nguyên,"prices":[số,...]}]}.
 Sản phẩm nhận diện: ${JSON.stringify({
     product_name: product.product_name,
     brand: product.brand,
@@ -341,9 +349,9 @@ Kết quả tìm kiếm: ${JSON.stringify(compactResults)}`;
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        maxOutputTokens: 1024
+        maxOutputTokens: 2048
       }
-    }, { timeoutMs: 20000, preferLite: true });
+    }, { timeoutMs: 25000, preferLite: true });
     parsed = parseJsonFromText(response.text);
   } catch (error) {
     // AI lọc nguồn hết lượt/quá tải: vẫn tính được giá bằng cách lọc theo từ khóa thay vì bỏ trống giá
@@ -351,11 +359,20 @@ Kết quả tìm kiếm: ${JSON.stringify(compactResults)}`;
     return { sources: keywordComparableSources(product, searchResults), method: "keyword" };
   }
 
-  const indexes = Array.isArray(parsed.relevant_indexes)
-    ? parsed.relevant_indexes.filter((n) => Number.isInteger(n) && n >= 0 && n < searchResults.length)
-    : [];
+  // Chỉ nhận giá có thật trong visible_prices của đúng kết quả đó (chặn AI bịa hoặc gán nhầm giá)
+  const byIndex = new Map();
+  for (const match of Array.isArray(parsed.matches) ? parsed.matches : []) {
+    const index = match?.index;
+    if (!Number.isInteger(index) || index < 0 || index >= searchResults.length) continue;
+    const allowed = new Set(compactResults[index].visible_prices);
+    const prices = (Array.isArray(match.prices) ? match.prices : []).map(Number).filter((p) => allowed.has(p));
+    if (prices.length) byIndex.set(index, [...new Set([...(byIndex.get(index) || []), ...prices])]);
+  }
 
-  return { sources: [...new Set(indexes)].map((index) => searchResults[index]), method: "ai" };
+  return {
+    sources: [...byIndex].map(([index, prices]) => ({ ...searchResults[index], prices })),
+    method: "ai"
+  };
 }
 
 // Lọc dự phòng không dùng AI: giữ kết quả có nhắc đúng model (hoặc đủ các từ khóa của tên sản phẩm)
@@ -489,7 +506,8 @@ function getConditionMultiplier(grade) {
 
 export function buildPriceEstimate(product, comparableResults, originalPrice) {
   const listings = comparableResults.map((r) => {
-    const prices = extractPrices(`${r.title}\n${r.content}`);
+    // Nguồn đã được AI chọn giá thì dùng đúng các giá đó; lọc theo từ khóa thì lấy mọi giá trích được
+    const prices = r.prices || extractPrices(`${r.title}\n${r.content}`);
     return {
       title: r.title,
       url: r.url,
