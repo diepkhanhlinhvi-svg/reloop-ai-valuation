@@ -302,12 +302,13 @@ async function tavilySearch(query) {
 }
 
 // 2 truy vấn mỗi lần định giá (2 credit với "basic") -> khoảng 500 lần định giá/tháng ở gói miễn phí.
-function searchQueries(product) {
+// Tavily không hiểu cú pháp "site:a OR site:b" (trả 0 kết quả) nên nhắc tên chợ ngay trong câu truy vấn.
+export function searchQueries(product) {
   const identity = productIdentity(product);
   if (!identity) return [];
   return [
-    `${identity} cũ giá bán Việt Nam`,
-    `${identity} đã qua sử dụng giá site:chotot.com OR site:muaban.net`
+    `${identity} cũ giá`,
+    `${identity} cũ giá chợ tốt`
   ];
 }
 
@@ -378,7 +379,7 @@ function keywordComparableSources(product, searchResults) {
   });
 }
 
-async function searchMarketListings(product) {
+export async function searchMarketListings(product) {
   if (!process.env.TAVILY_API_KEY) {
     throw httpError(503, "Chưa cấu hình TAVILY_API_KEY để tìm giá thị trường.");
   }
@@ -403,8 +404,11 @@ async function searchMarketListings(product) {
 
 // Extract only explicit price strings found in search result text.
 // Do not let the language model invent prices.
-function extractPrices(text) {
-  const source = String(text || "");
+// Giá máy mới / giá gạch ngang / số tiền giảm không phải giá đồ cũ -> bỏ trước khi trích xuất.
+const NOT_USED_PRICE = /~~[^~]*~~|(?:giá\s*(?:máy|sản phẩm)\s*mới|(?<!như\s)mới\s*:|niêm yết(?:\s*chính thức)?(?:\s*là)?|giảm(?:\s*thêm)?|tiết kiệm)\s*[:\-]?\s*[0-9][0-9.,]*\s*(?:₫|đ|vnđ|vnd)?/giu;
+
+export function extractPrices(text) {
+  const source = String(text || "").replace(NOT_USED_PRICE, " ");
   // Dùng (?![\p{L}\p{N}]) thay cho \b: trong regex JS, \b chỉ hiểu ký tự ASCII nên "8.500.000 đ"
   // hoặc "8.500.000₫" (không có chữ cái ASCII sau đ/₫) trước đây không bao giờ khớp.
   const patterns = [
@@ -430,6 +434,21 @@ function extractPrices(text) {
         continue;
       }
 
+      if (Number.isFinite(value) && value >= 10000 && value <= 10000000000) {
+        values.push(value);
+      }
+    }
+  }
+
+  // Dạng viết tắt rất phổ biến trong tin rao: "8,5 triệu", "11 tr", "390k"
+  const unitPatterns = [
+    [/(?<![\p{L}\p{N}.,])(\d{1,3}(?:[.,]\d{1,2})?)\s*(?:triệu|tr)(?![\p{L}\p{N}])/giu, 1_000_000],
+    [/(?<![\p{L}\p{N}.,])(\d{2,4})\s*(?:k|nghìn|ngàn)(?![\p{L}\p{N}])/giu, 1_000]
+  ];
+  for (const [pattern, unit] of unitPatterns) {
+    let match;
+    while ((match = pattern.exec(source)) !== null) {
+      const value = Math.round(Number(match[1].replace(",", ".")) * unit);
       if (Number.isFinite(value) && value >= 10000 && value <= 10000000000) {
         values.push(value);
       }
@@ -468,7 +487,7 @@ function getConditionMultiplier(grade) {
   return map[grade] ?? 0.90;
 }
 
-function buildPriceEstimate(product, comparableResults, originalPrice) {
+export function buildPriceEstimate(product, comparableResults, originalPrice) {
   const listings = comparableResults.map((r) => {
     const prices = extractPrices(`${r.title}\n${r.content}`);
     return {
