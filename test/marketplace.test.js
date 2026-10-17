@@ -30,7 +30,6 @@ async function rejects(promise, status) {
 
 test("tin hiện ngay trên chợ, ảnh được tải lên Blob và chỉ lưu URL", async () => {
   const listing = await createListing(alice, { name: "Nồi chiên", price: 900_000, image: TINY_JPEG });
-  assert.equal(listing.status, "approved");
   assert.equal(listing.availability, "available");
   assert.equal(listing.image, blob.uploaded[0]);
 
@@ -137,7 +136,6 @@ test("quy trình escrow: xác nhận -> nhận hàng -> món đồ đã bán", a
 
   const [sold] = await listListings(alice);
   assert.equal(sold.availability, "sold");
-  assert.equal(sold.sold, 1);
   await rejects(updateOrder(alice, order.id, "cancel"), 409); // đã hoàn tất thì không hủy được
 });
 

@@ -1,10 +1,10 @@
 // Toàn bộ logic giao diện ReLoop (tách khỏi index.html để CSP không cần cho phép script inline)
-// --- APP STATE & MOCK DATA ---
+// --- TRẠNG THÁI ỨNG DỤNG ---
 const state = {
     channel: 'buyer', // 'buyer' | 'seller' | 'trade'
     currentPage: 'home',
     selectedProductId: null,
-    cart: loadCart(), // [{ id, name, price, image, selectedVariant }] — đồ cũ nên mỗi món chỉ có 1 cái
+    cart: loadCart(), // [{ id, name, price, image }] — đồ cũ nên mỗi món chỉ có 1 cái
     categoryFilter: 'all',
     searchQuery: '',
     user: null, // { username, name, role: 'admin' | 'user' } khi đã đăng nhập
@@ -16,7 +16,7 @@ const state = {
     infoPage: 'help' // trang thông tin đang xem (chân trang)
 };
 
-// Tin đăng tải từ máy chủ (/api/listings): gồm tin đã duyệt, cộng tin của chính mình (admin thấy tất cả)
+// Tin đăng tải từ máy chủ (/api/listings): tin còn bán, cộng tin của chính mình (admin thấy tất cả để kiểm tra)
 const products = [];
 
 // --- API, ĐĂNG NHẬP & TIN ĐĂNG ---
@@ -309,10 +309,7 @@ function normalizeSearch(str) {
 function navigateTo(page, productId = null, section = null) {
     state.currentPage = page;
     if (page === 'info' && section) state.infoPage = section;
-    if (productId) {
-        if (productId !== state.selectedProductId) state.selectedVariantIndex = 0;
-        state.selectedProductId = productId;
-    }
+    if (productId) state.selectedProductId = productId;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     renderPage();
     updateCartBadge();
@@ -1023,7 +1020,6 @@ function renderDetail() {
             `;
     }
     const variants = product.variants && product.variants.length ? product.variants : ['Mặc định'];
-    if (!(state.selectedVariantIndex < variants.length)) state.selectedVariantIndex = 0;
     const canBuy = !buyBlocker(product);
     const isMine = Boolean(state.user && product.owner === state.user.username);
     const canOffer = product.type !== 'buy' && product.availability === 'available' && !isMine && !isAdminUser();
@@ -1083,16 +1079,11 @@ function renderDetail() {
                                 ` : ''}
 
                                 <div class="space-y-4 mb-6">
-                                    <div>
-                                        <label class="text-xs font-bold text-gray-600 block mb-2">PHÂN LOẠI / BIẾN THỂ:</label>
-                                        <div class="flex flex-wrap gap-2">
-                                            ${variants.map((v, idx) => `
-                                                <button onclick="selectVariant(this, ${idx})" class="variant-btn px-4 py-1.5 text-xs rounded-lg border ${idx === state.selectedVariantIndex ? 'border-brand-700 bg-brand-50 text-brand-800 font-bold' : 'border-gray-200 text-gray-700 hover:border-brand-500'}">
-                                                    ${escapeHtml(v)}
-                                                </button>
-                                            `).join('')}
-                                        </div>
-                                    </div>
+                                    ${variants.some(v => v !== 'Mặc định') ? `
+                                    <div class="flex flex-wrap items-center gap-2 text-xs">
+                                        <span class="font-bold text-gray-600">TÌNH TRẠNG:</span>
+                                        ${variants.map(v => `<span class="px-3 py-1 rounded-lg border border-brand-700 bg-brand-50 text-brand-800 font-bold">${escapeHtml(v)}</span>`).join('')}
+                                    </div>` : ''}
 
                                     <p class="text-xs text-gray-500"><i class="fas fa-info-circle text-brand-600"></i> Đồ cũ: mỗi tin chỉ có 1 món. Khi có người đặt, món sẽ được giữ cho người đó tới khi giao dịch xong.</p>
                                 </div>
@@ -1156,7 +1147,6 @@ function renderCart() {
                                         <img src="${escapeHtml(item.image)}" alt="" class="w-16 h-16 rounded-lg object-cover border flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${item.id})">
                                         <div class="min-w-0">
                                             <h4 class="font-semibold text-gray-800 line-clamp-1">${escapeHtml(item.name)}</h4>
-                                            <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">Phân loại: ${escapeHtml(item.selectedVariant || 'Mặc định')}</span>
                                         </div>
                                     </div>
                                     <div class="md:col-span-4 text-right flex md:block justify-between items-center">
@@ -1529,33 +1519,17 @@ function renderAIValuation() {
             `;
 }
 
-// CÁC SỰ KIỆN TƯƠNG TÁC KHÁC
-function selectVariant(btn, idx) {
-    document.querySelectorAll('.variant-btn').forEach(b => {
-        b.classList.remove('border-brand-700', 'bg-brand-50', 'text-brand-800', 'font-bold');
-        b.classList.add('border-gray-200', 'text-gray-700', 'hover:border-brand-500');
-    });
-    btn.classList.remove('border-gray-200', 'text-gray-700', 'hover:border-brand-500');
-    btn.classList.add('border-brand-700', 'bg-brand-50', 'text-brand-800', 'font-bold');
-    state.selectedVariantIndex = idx;
-}
-
-// Đồ cũ chỉ có 1 món mỗi tin: thêm lại món đã có trong giỏ chỉ đổi phân loại đã chọn
+// Đồ cũ chỉ có 1 món mỗi tin: thêm lại món đã có trong giỏ thì chỉ báo là đã có
 function addToCart(productId, silent = false) {
     const product = products.find(p => p.id === productId);
     const blocker = buyBlocker(product);
     if (blocker) { showToast(blocker, 'error'); return false; }
-    const variants = product.variants && product.variants.length ? product.variants : ['Mặc định'];
-    const selectedVariant = variants[state.selectedVariantIndex] ?? variants[0];
 
-    const existing = state.cart.find(item => item.id === productId);
-    if (existing) {
-        existing.selectedVariant = selectedVariant;
-        saveCart();
+    if (state.cart.some(item => item.id === productId)) {
         if (!silent) showToast('Món này đã có trong giỏ hàng');
         return true;
     }
-    state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image, selectedVariant });
+    state.cart.push({ id: product.id, name: product.name, price: product.price, image: product.image });
     saveCart();
     if (!silent) showToast('Đã thêm sản phẩm vào giỏ hàng!');
     return true;
@@ -1601,7 +1575,7 @@ function renderCheckout() {
                         ${state.cart.map(item => `
                             <li class="flex items-center gap-3 p-2.5">
                                 <img src="${escapeHtml(item.image)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0 bg-gray-100">
-                                <span class="flex-1 min-w-0 truncate">${escapeHtml(item.name)} <span class="text-gray-400">· ${escapeHtml(item.selectedVariant || 'Mặc định')}</span></span>
+                                <span class="flex-1 min-w-0 truncate">${escapeHtml(item.name)}</span>
                                 <span class="font-bold text-brand-800 whitespace-nowrap">${formatMoney(item.price)}</span>
                             </li>`).join('')}
                     </ul>
@@ -1639,7 +1613,7 @@ async function submitOrder(e) {
         await api('/api/orders', {
             method: 'POST',
             body: JSON.stringify({
-                items: state.cart.map(item => ({ listingId: item.id, variant: item.selectedVariant })),
+                items: state.cart.map(item => ({ listingId: item.id })),
                 phone: document.getElementById('co-phone').value,
                 address: document.getElementById('co-address').value,
                 note: document.getElementById('co-note').value
@@ -1827,9 +1801,7 @@ function orderRow(o, role) {
     const canCancel = ['pending', 'confirmed'].includes(o.status);
     const counterpart = role === 'sale'
         ? `Người mua: <strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.phone)} · ${escapeHtml(o.address)}`
-        : role === 'purchase'
-            ? `Người bán: <strong>${escapeHtml(o.sellerName)}</strong>`
-            : `${escapeHtml(o.buyerName)} mua của ${escapeHtml(o.sellerName)}`;
+        : `Người bán: <strong>${escapeHtml(o.sellerName)}</strong>`;
     return `
         <div class="flex flex-col sm:flex-row sm:items-center gap-3 text-xs border-b py-3">
             <img src="${escapeHtml(o.itemImage)}" alt="" class="w-14 h-14 rounded object-cover flex-shrink-0 bg-gray-100">
