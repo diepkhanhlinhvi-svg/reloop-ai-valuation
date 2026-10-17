@@ -98,8 +98,7 @@
 
                 <!-- User & Notifications -->
                 <div class="flex items-center space-x-4 flex-shrink-0">
-                    <a href="#" onclick="return false;" class="hover:text-green-200 flex items-center gap-1" title="Thông báo"><i class="far fa-bell"></i> <span class="hidden md:inline">Thông báo</span></a>
-                    <a href="#" onclick="return false;" class="hover:text-green-200 flex items-center gap-1" title="Hỗ trợ"><i class="far fa-question-circle"></i> <span class="hidden md:inline">Hỗ trợ</span></a>
+                    <a href="#" onclick="navigateTo('info', null, 'help'); return false;" class="hover:text-green-200 flex items-center gap-1" title="Hỗ trợ"><i class="far fa-question-circle"></i> <span class="hidden md:inline">Hỗ trợ</span></a>
                     <div id="user-top-bar" class="flex items-center gap-3"></div>
                 </div>
             </div>
@@ -154,59 +153,53 @@
 
     <!-- Footer -->
     <footer class="bg-white border-t border-gray-200 mt-12 text-sm text-gray-600">
-        <div class="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="w-9 h-9 rounded-full bg-brand-800 text-white font-black flex items-center justify-center">RL</div>
+                    <span class="text-xl font-black text-brand-800">ReLoop</span>
+                </div>
+                <p class="text-xs text-gray-500 leading-relaxed">Chợ mua bán và trao đổi đồ cũ. Mỗi món chỉ có một, trao tay để thêm một vòng đời mới.</p>
+            </div>
             <div>
-                <h3 class="font-bold text-gray-800 mb-3 text-base">CHĂM SÓC KHÁCH HÀNG</h3>
+                <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Hỗ trợ</h3>
                 <ul class="space-y-2 text-xs">
-                    <li><a href="#" class="hover:text-brand-700">Trung Tâm Trợ Giúp</a></li>
-                    <li><a href="#" class="hover:text-brand-700">ReLoop Blog</a></li>
-                    <li><a href="#" class="hover:text-brand-700">Hướng Dẫn Mua Hàng & Trao Đổi</a></li>
-                    <li><a href="#" class="hover:text-brand-700">Hướng Dẫn Đăng Bán</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'help'); return false;" class="hover:text-brand-700">Trung tâm trợ giúp</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'how-to-buy'); return false;" class="hover:text-brand-700">Hướng dẫn mua hàng</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'how-to-sell'); return false;" class="hover:text-brand-700">Hướng dẫn đăng bán</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'how-to-trade'); return false;" class="hover:text-brand-700">Hướng dẫn trao đổi</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'shipping'); return false;" class="hover:text-brand-700">Giao nhận &amp; thanh toán an toàn</a></li>
                 </ul>
             </div>
             <div>
-                <h3 class="font-bold text-gray-800 mb-3 text-base">VỀ RELOOP</h3>
+                <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Về ReLoop</h3>
                 <ul class="space-y-2 text-xs">
-                    <li><a href="#" class="hover:text-brand-700">Giới Thiệu Về ReLoop</a></li>
-                    <li><a href="#" class="hover:text-brand-700">Tuyển Dụng</a></li>
-                    <li><a href="#" class="hover:text-brand-700">Điều Khoản ReLoop</a></li>
-                    <li><a href="#" class="hover:text-brand-700">Chính Sách Bảo Mật Escrow</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'about'); return false;" class="hover:text-brand-700">Giới thiệu</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'rules'); return false;" class="hover:text-brand-700">Quy định đăng tin</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'terms'); return false;" class="hover:text-brand-700">Điều khoản sử dụng</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'privacy'); return false;" class="hover:text-brand-700">Chính sách bảo mật</a></li>
+                    <li><a href="#" onclick="navigateTo('info', null, 'contact'); return false;" class="hover:text-brand-700">Liên hệ</a></li>
                 </ul>
             </div>
             <div>
-                <h3 class="font-bold text-gray-800 mb-3 text-base">THANH TOÁN & VẬN CHUYỂN</h3>
-                <div class="flex flex-wrap gap-2 mb-4">
-                    <span class="p-2 border rounded bg-gray-50 text-xs font-semibold text-blue-800">VISA</span>
-                    <span class="p-2 border rounded bg-gray-50 text-xs font-semibold text-red-600">MasterCard</span>
-                    <span class="p-2 border rounded bg-gray-50 text-xs font-semibold text-pink-600">Momo</span>
-                    <span class="p-2 border rounded bg-gray-50 text-xs font-semibold text-green-700">COD</span>
-                </div>
-            </div>
-            <div>
-                <h3 class="font-bold text-gray-800 mb-3 text-base">TẢI ỨNG DỤNG RELOOP</h3>
-                <div class="flex items-center gap-3">
-                    <div class="w-20 h-20 bg-gray-200 rounded flex items-center justify-center p-1 border">
-                        <i class="fas fa-qrcode text-4xl text-gray-700"></i>
-                    </div>
-                    <div class="space-y-2">
-                        <button class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 w-full hover:bg-gray-700">
-                            <i class="fab fa-apple text-sm"></i> App Store
-                        </button>
-                        <button class="bg-gray-800 text-white px-3 py-1.5 rounded text-xs flex items-center gap-2 w-full hover:bg-gray-700">
-                            <i class="fab fa-google-play text-sm"></i> Google Play
-                        </button>
-                    </div>
-                </div>
+                <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Khám phá</h3>
+                <ul class="space-y-2 text-xs">
+                    <li><a href="#" onclick="switchChannel('buyer'); return false;" class="hover:text-brand-700">Kênh người mua</a></li>
+                    <li><a href="#" onclick="switchChannel('seller'); return false;" class="hover:text-brand-700">Kênh người bán</a></li>
+                    <li><a href="#" onclick="switchChannel('trade'); return false;" class="hover:text-brand-700">Kênh trao đổi</a></li>
+                    <li><a href="#" onclick="navigateTo('ai-valuation'); return false;" class="hover:text-brand-700">Định giá bằng AI</a></li>
+                </ul>
             </div>
         </div>
         <div class="bg-gray-100 py-4 text-center text-xs border-t text-gray-500">
-            © 2026 ReLoop. Tất cả các quyền được bảo lưu. Mô phỏng nền tảng mua bán & trao đổi đồ cũ toàn diện.
+            © 2026 ReLoop. Tất cả các quyền được bảo lưu.
         </div>
     </footer>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2"></div>
 
+    <script src="/info.js"></script>
     <script src="/app.js"></script>
 </body>
 </html>

@@ -13,7 +13,7 @@ const state = {
     admin: { stats: null, loading: false, error: null },
     // Đơn mua/bán và đề nghị trao đổi của người đang đăng nhập (tải khi mở trang Đơn hàng / Kênh Người Bán)
     activity: { orders: null, offers: null, loading: false, error: null, tab: 'purchases' },
-    flashSaleEndTime: new Date().getTime() + (12 * 3600 * 1000 + 45 * 60 * 1000)
+    infoPage: 'help' // trang thông tin đang xem (chân trang)
 };
 
 // Tin đăng tải từ máy chủ (/api/listings): gồm tin đã duyệt, cộng tin của chính mình (admin thấy tất cả)
@@ -297,8 +297,9 @@ function normalizeSearch(str) {
         .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 }
 
-function navigateTo(page, productId = null) {
+function navigateTo(page, productId = null, section = null) {
     state.currentPage = page;
+    if (page === 'info' && section) state.infoPage = section;
     if (productId) {
         if (productId !== state.selectedProductId) state.selectedVariantIndex = 0;
         state.selectedProductId = productId;
@@ -332,9 +333,9 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// Bộ lọc/tìm kiếm chỉ áp dụng cho Kênh Người Mua, nên luôn chuyển về kênh này
+// Bộ lọc/tìm kiếm áp dụng cho Kênh Người Mua và Kênh Trao Đổi; kênh bán hàng thì chuyển về kênh mua
 function goToBuyerHome() {
-    state.channel = 'buyer';
+    if (state.channel !== 'trade') state.channel = 'buyer';
     updateChannelButtons();
     navigateTo('home');
 }
@@ -364,6 +365,10 @@ function renderPage() {
 
     if (state.currentPage === 'detail') {
         container.innerHTML = renderDetail();
+        return;
+    }
+    if (state.currentPage === 'info') {
+        container.innerHTML = renderInfo();
         return;
     }
     if (state.currentPage === 'cart') {
@@ -415,7 +420,6 @@ function renderPage() {
         case 'buyer':
         default:
             container.innerHTML = renderHome();
-            startCountdown();
             break;
     }
 }
@@ -435,38 +439,17 @@ function renderHome() {
         filtered = filtered.filter(p => normalizeSearch(p.name).includes(q));
     }
 
-    const flashItems = marketProducts().filter(p => p.type === 'buy' || p.type === 'both').slice(0, 4);
-
     return `
-                <!-- Banners & Carousel Section -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="md:col-span-2 relative rounded-xl overflow-hidden shadow-sm bg-gradient-to-r from-brand-700 to-brand-900 text-white p-8 flex flex-col justify-center min-h-[220px]">
-                        <span class="bg-yellow-400 text-brand-900 font-bold px-3 py-1 rounded-full text-xs w-max mb-3">SIÊU SALE 10.10</span>
-                        <h1 class="text-2xl md:text-3xl font-extrabold mb-2 leading-tight">MUA SẮM XANH - NHẬN VOUCHER ĐẾN 50%</h1>
-                        <p class="text-green-100 text-sm mb-5">Miễn phí vận chuyển cho tất cả đơn hàng từ 0đ</p>
-                        <div>
-                            <button onclick="filterByCategory('all')" class="bg-white text-brand-800 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-green-50 transition shadow">
-                                Khám Phá Ngay
-                            </button>
-                        </div>
+                <!-- Hero: giới thiệu đồ cũ, mỗi món chỉ có một -->
+                <div class="rounded-xl overflow-hidden shadow-sm bg-gradient-to-r from-brand-700 to-brand-900 text-white p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div>
+                        <span class="bg-yellow-400 text-brand-900 font-bold px-3 py-1 rounded-full text-xs w-max">ĐỒ CŨ - MỖI MÓN CHỈ CÓ MỘT</span>
+                        <h1 class="text-2xl md:text-3xl font-extrabold mt-3 mb-2 leading-tight">Cho món đồ cũ một vòng đời mới</h1>
+                        <p class="text-green-100 text-sm max-w-xl">Mua đồ đã qua sử dụng với giá hợp lý, hoặc đổi ngang giá món bạn không dùng lấy món bạn cần. Ai đặt trước thì món đó được giữ cho người ấy.</p>
                     </div>
-                    <div class="flex flex-col gap-4">
-                        <div class="flex-1 bg-green-100 rounded-xl p-4 border border-brand-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs font-semibold text-brand-800 uppercase">Khuyến Mãi Hot</span>
-                                <h4 class="font-bold text-gray-800">Voucher Giảm 50K</h4>
-                                <p class="text-xs text-gray-500">Đơn tối thiểu 150K</p>
-                            </div>
-                            <i class="fas fa-ticket-alt text-3xl text-brand-600"></i>
-                        </div>
-                        <div class="flex-1 bg-emerald-50 rounded-xl p-4 border border-emerald-200 flex items-center justify-between">
-                            <div>
-                                <span class="text-xs font-semibold text-emerald-800 uppercase">Thành Viên Mới</span>
-                                <h4 class="font-bold text-gray-800">Quà Tặng 0 Đồng</h4>
-                                <p class="text-xs text-gray-500">Dành cho tài khoản mới</p>
-                            </div>
-                            <i class="fas fa-gift text-3xl text-emerald-600"></i>
-                        </div>
+                    <div class="flex flex-wrap gap-3 flex-shrink-0">
+                        <button onclick="filterByCategory('all')" class="bg-white text-brand-800 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-green-50 transition shadow">Khám phá ngay</button>
+                        <button onclick="navigateTo('info', null, 'how-to-trade')" class="border border-white/60 text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-white/10 transition">Cách đổi đồ</button>
                     </div>
                 </div>
 
@@ -494,45 +477,6 @@ function renderHome() {
                                 </div>
                                 <span class="text-xs text-center">${cat.name}</span>
                             </button>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- Flash Sale Section -->
-                <div class="bg-white rounded-xl shadow-sm border border-red-100 overflow-hidden">
-                    <div class="bg-gradient-to-r from-red-600 to-orange-500 px-4 py-3 text-white flex flex-wrap items-center justify-between gap-2">
-                        <div class="flex items-center gap-2">
-                            <i class="fas fa-bolt text-yellow-300 text-xl animate-bounce"></i>
-                            <span class="font-black text-lg tracking-wide uppercase">FLASH SALE</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-xs font-medium">
-                            <span>KẾT THÚC TRONG:</span>
-                            <div id="countdown" class="flex gap-1 font-mono text-sm font-bold">
-                                <span class="bg-black/30 px-2 py-0.5 rounded" id="timer-h">00</span>:
-                                <span class="bg-black/30 px-2 py-0.5 rounded" id="timer-m">00</span>:
-                                <span class="bg-black/30 px-2 py-0.5 rounded" id="timer-s">00</span>
-                            </div>
-                        </div>
-                    </div>
-                    ${flashItems.length === 0 ? `
-                        <div class="p-8 text-center text-gray-400 text-sm">
-                            <i class="fas fa-bolt text-3xl text-gray-200 mb-2 block"></i>
-                            Chưa có sản phẩm Flash Sale. Hãy quay lại sau nhé!
-                        </div>
-                    ` : ''}
-                    <div class="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 ${flashItems.length === 0 ? 'hidden' : ''}">
-                        ${flashItems.map(p => `
-                            <div class="border rounded-lg p-2 relative hover:shadow-md transition cursor-pointer" onclick="navigateTo('detail', ${p.id})">
-                                ${discountLabel(p) ? `<span class="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded z-10">${escapeHtml(discountLabel(p))}</span>` : ''}
-                                <img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" class="w-full h-36 object-cover rounded-md mb-2 bg-gray-100">
-                                <h3 class="text-xs font-semibold text-gray-800 line-clamp-2 mb-1">${escapeHtml(p.name)}</h3>
-                                <div class="text-red-600 font-bold text-sm">${formatMoney(p.price)}</div>
-                                <div class="text-[10px] text-gray-400 line-through ${hasDiscount(p) ? '' : 'invisible'}">${formatMoney(p.originalPrice)}</div>
-                                <div class="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
-                                    <div class="bg-red-500 h-2 rounded-full" style="width: 75%"></div>
-                                </div>
-                                <span class="text-[10px] text-gray-500 block text-center mt-1">Đã bán 75%</span>
-                            </div>
                         `).join('')}
                     </div>
                 </div>
@@ -578,11 +522,8 @@ function renderHome() {
                                         </div>
                                         <div>
                                             <div class="flex items-center justify-between text-[11px] text-gray-500 mb-2">
-                                                <div class="flex items-center gap-1 text-yellow-500">
-                                                    <i class="fas fa-star"></i>
-                                                    <span>${product.rating}</span>
-                                                </div>
-                                                <span>Đã bán ${product.sold}</span>
+                                                <span class="truncate"><i class="far fa-user"></i> ${escapeHtml(product.ownerName || 'Người bán')}</span>
+                                                <span class="whitespace-nowrap font-semibold text-brand-700">Chỉ còn 1</span>
                                             </div>
                                             <div class="text-[10px] text-gray-400 flex items-center gap-1">
                                                 <i class="fas fa-map-marker-alt text-gray-300"></i> ${escapeHtml(product.location)}
@@ -671,8 +612,8 @@ function renderSellerChannel() {
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label class="font-bold text-gray-700 block mb-1">Giá Bán Niêm Yết (VNĐ)</label>
-                                    <input type="number" id="up-price" min="0" placeholder="VD: 450000"
+                                    <label class="font-bold text-gray-700 block mb-1">Giá Bán / Giá Trị Ước Tính (VNĐ) *</label>
+                                    <input type="number" id="up-price" min="1" required placeholder="VD: 450000"
                                         class="w-full border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-brand-600 outline-none">
                                 </div>
                                 <div>
@@ -687,6 +628,7 @@ function renderSellerChannel() {
                                 <label class="font-bold text-amber-900 block mb-1"><i class="fas fa-sync-alt"></i> Món Đồ Muốn Nhận Đổi Lại</label>
                                 <input type="text" id="up-desired" placeholder="VD: Muốn đổi lấy Loa Bluetooth mini hoặc Nồi chiên không dầu..."
                                     class="w-full border rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none">
+                                <p class="text-amber-800 mt-1.5">Trao đổi theo nguyên tắc ngang giá: người đề nghị phải dùng một món của họ có giá chênh lệch với giá bạn nhập không quá ${TRADE_TOLERANCE_PERCENT}%.</p>
                             </div>
 
                             <div>
@@ -798,7 +740,7 @@ async function handleUploadProduct(e) {
     const file = document.getElementById('up-image-file').files[0];
 
     if (!name) { showToast('Vui lòng nhập tên sản phẩm', 'error'); return; }
-    if (type !== 'trade' && price <= 0) { showToast('Vui lòng nhập giá bán hợp lệ', 'error'); return; }
+    if (price <= 0) { showToast(type === 'trade' ? 'Vui lòng nhập giá trị ước tính của món đồ' : 'Vui lòng nhập giá bán hợp lệ', 'error'); return; }
 
     publishing = true;
     if (submitBtn) submitBtn.disabled = true;
@@ -833,83 +775,225 @@ function publishedListing(listing) {
 // =====================================================
 // 3. KÊNH TRAO ĐỔI SẢN PHẨM (TRADING CHANNEL)
 // =====================================================
+// Đổi ngang giá: hai món chênh nhau tối đa bấy nhiêu phần trăm (máy chủ kiểm tra lại, phải khớp số này)
+const TRADE_TOLERANCE_PERCENT = 10;
+
+function isFairTrade(priceA, priceB) {
+    const high = Math.max(priceA, priceB);
+    const low = Math.min(priceA, priceB);
+    return low > 0 && (high - low) * 100 <= high * TRADE_TOLERANCE_PERCENT;
+}
+
+// Khoảng giá của những món đổi ngang được với một món có giá `price`
+function tradeRange(price) {
+    const keep = 100 - TRADE_TOLERANCE_PERCENT;
+    return [Math.ceil(price * keep / 100), Math.floor(price * 100 / keep)];
+}
+
+// --- Hộp thoại dùng chung ---
+function openModal(html) {
+    closeModal();
+    const overlay = document.createElement('div');
+    overlay.id = 'modal-root';
+    overlay.className = 'fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4';
+    overlay.innerHTML = `<div role="dialog" aria-modal="true" class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 text-xs">${html}</div>`;
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closeModal(); });
+    document.body.appendChild(overlay);
+}
+
+function closeModal() {
+    document.getElementById('modal-root')?.remove();
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
 function renderTradingChannel() {
-    const tradeItems = marketProducts().filter(p => p.type === 'trade' || p.type === 'both');
+    let tradeItems = marketProducts().filter(p => p.type === 'trade' || p.type === 'both');
+    if (state.categoryFilter !== 'all') tradeItems = tradeItems.filter(p => p.category === state.categoryFilter);
+    if (state.searchQuery) {
+        const q = normalizeSearch(state.searchQuery);
+        tradeItems = tradeItems.filter(p => normalizeSearch(`${p.name} ${p.desiredExchange}`).includes(q));
+    }
+    const filtering = state.categoryFilter !== 'all' || state.searchQuery;
+    const receivedWaiting = (state.activity.offers?.received || []).filter(o => o.status === 'pending').length;
 
     return `
                 <div class="space-y-6">
-                    <!-- Banner Kênh Trao Đổi -->
                     <div class="bg-gradient-to-r from-amber-600 to-yellow-600 text-white rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
-                            <span class="bg-black/30 font-bold px-3 py-0.5 rounded-full text-xs uppercase">SÀN TRAO ĐỔI ĐỒ CŨ</span>
-                            <h1 class="text-2xl font-extrabold mt-2">ĐỔI ĐỒ CŨ LẤY ĐỒ CẦN - TRAO TAY GIÁ TRỊ </h1>
-                            <p class="text-yellow-100 text-sm mt-1">Đăng vật phẩm của bạn và gửi đề nghị đổi lấy món đồ khác dễ dàng.</p>
+                            <span class="bg-black/30 font-bold px-3 py-0.5 rounded-full text-xs uppercase">Sàn trao đổi đồ cũ</span>
+                            <h1 class="text-2xl font-extrabold mt-2">Đổi ngang giá, hai bên cùng đồng ý</h1>
+                            <p class="text-yellow-100 text-sm mt-1 max-w-2xl">Chọn món bạn muốn, đề nghị đổi bằng một món của bạn có giá trị chênh lệch không quá ${TRADE_TOLERANCE_PERCENT}%. Chủ món chấp nhận thì hai món cùng được đánh dấu đã đổi và hai bên nhận số điện thoại của nhau để hẹn giao nhận.</p>
                         </div>
-                        <button onclick="switchChannel('seller')" class="bg-white text-amber-900 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-yellow-50 shadow whitespace-nowrap">
-                            <i class="fas fa-plus-circle mr-1"></i> Đăng Đồ Muốn Đổi
-                        </button>
+                        <div class="flex flex-wrap gap-2 flex-shrink-0">
+                            <button onclick="switchChannel('seller')" class="bg-white text-amber-900 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-yellow-50 shadow whitespace-nowrap">
+                                <i class="fas fa-plus-circle mr-1"></i> Đăng đồ muốn đổi
+                            </button>
+                            <button onclick="openActivity('received')" class="border border-white/70 text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-white/10 whitespace-nowrap">
+                                <i class="fas fa-inbox mr-1"></i> Đề nghị của tôi${receivedWaiting ? ` <span class="bg-red-500 text-white rounded-full px-1.5 ml-1">${receivedWaiting}</span>` : ''}
+                            </button>
+                        </div>
                     </div>
 
-                    <!-- Lưới Vật Phẩm Sẵn Sàng Trao Đổi -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        ${[
+                            ['1', 'Chọn món muốn nhận', 'Xem các món đang mở trao đổi và giá trị của chúng.'],
+                            ['2', 'Đề nghị đổi bằng món của bạn', `Chọn một món bạn đang đăng, giá chênh nhau tối đa ${TRADE_TOLERANCE_PERCENT}%, kèm số điện thoại.`],
+                            ['3', 'Hai bên đồng ý là xong', 'Cả hai món đều biến khỏi chợ, bạn nhận số điện thoại của đối phương.']
+                        ].map(([n, title, text]) => `
+                            <div class="bg-white rounded-xl border border-amber-100 p-4 flex gap-3">
+                                <span class="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center flex-shrink-0">${n}</span>
+                                <div><h3 class="font-bold text-gray-800">${title}</h3><p class="text-gray-500 mt-0.5">${text}</p></div>
+                            </div>`).join('')}
+                    </div>
+
+                    <div class="bg-white rounded-xl p-3 shadow-sm flex flex-wrap gap-2">
+                        ${categories.map(cat => `
+                            <button onclick="filterByCategory('${cat.id}')" class="px-3 py-1.5 rounded-full text-xs border ${state.categoryFilter === cat.id ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : 'border-gray-200 text-gray-600 hover:border-amber-400'}">${cat.name}</button>
+                        `).join('')}
+                    </div>
+
                     <div>
-                        <h2 class="text-base font-bold text-gray-800 border-l-4 border-amber-500 pl-3 mb-4 uppercase">DANH SÁCH VẬT PHẨM ĐANG CHỜ TRAO ĐỔI</h2>
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-base font-bold text-gray-800 border-l-4 border-amber-500 pl-3 uppercase">
+                                ${state.searchQuery ? `Kết quả cho "${escapeHtml(state.searchQuery)}"` : `Đồ đang chờ trao đổi (${tradeItems.length})`}
+                            </h2>
+                            ${filtering ? `<button onclick="filterByCategory('all')" class="text-xs text-amber-700 hover:underline">Xóa bộ lọc</button>` : ''}
+                        </div>
                         ${tradeItems.length === 0 ? `
                             <div class="bg-white rounded-xl p-12 text-center text-gray-500 shadow-sm">
                                 <i class="fas fa-exchange-alt text-5xl text-gray-300 mb-3"></i>
-                                <p class="text-base font-medium">Chưa có vật phẩm nào đang chờ trao đổi.</p>
-                                <button onclick="switchChannel('seller')" class="mt-4 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 transition">Đăng đồ muốn đổi đầu tiên</button>
+                                <p class="text-base font-medium">${filtering ? 'Không có món nào phù hợp.' : 'Chưa có vật phẩm nào đang chờ trao đổi.'}</p>
+                                <button onclick="switchChannel('seller')" class="mt-4 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 transition">Đăng đồ muốn đổi</button>
                             </div>
-                        ` : ''}
+                        ` : `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            ${tradeItems.map(item => `
-                                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" class="w-full sm:w-36 h-36 object-cover rounded-lg flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${item.id})">
-                                    <div class="flex-1 min-w-0 space-y-2 text-xs w-full">
-                                        <span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">CÓ THỂ TRAO ĐỔI</span>
-                                        <h3 class="font-bold text-gray-800 text-sm line-clamp-1">${escapeHtml(item.name)}</h3>
-                                        <div class="bg-gray-50 p-2 rounded border border-dashed border-amber-300 text-gray-700">
-                                            <i class="fas fa-exchange-alt text-amber-600 mr-1"></i>
-                                            <span class="font-bold">Nhu cầu đổi:</span> ${escapeHtml(item.desiredExchange || 'Đổi vật phẩm tương đương')}
-                                        </div>
-                                        <p class="text-gray-500 line-clamp-1">${escapeHtml(item.description)}</p>
-                                        <div class="pt-1 flex items-center justify-between gap-2">
-                                            <span class="text-gray-400 text-[10px] truncate"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(item.location)}</span>
-                                            <button onclick="makeTradeOffer(${item.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex-shrink-0">
-                                                Gửi Đề Nghị Đổi
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
+                            ${tradeItems.map(tradeCard).join('')}
+                        </div>`}
                     </div>
                 </div>
             `;
 }
 
-async function makeTradeOffer(productId) {
-    const item = products.find(p => p.id === productId);
-    if (!item) return;
+function tradeCard(item) {
+    const mine = Boolean(state.user && item.owner === state.user.username);
+    const [low, high] = tradeRange(item.price);
+    return `
+                                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4">
+                                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" class="w-full sm:w-36 h-36 object-cover rounded-lg flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${item.id})">
+                                    <div class="flex-1 min-w-0 space-y-2 text-xs w-full">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">${item.type === 'both' ? 'BÁN HOẶC ĐỔI' : 'CHỈ TRAO ĐỔI'}</span>
+                                            <span class="text-gray-400"><i class="far fa-user"></i> ${escapeHtml(item.ownerName || 'Người đăng')}</span>
+                                        </div>
+                                        <h3 class="font-bold text-gray-800 text-sm line-clamp-1 cursor-pointer hover:text-amber-700" onclick="navigateTo('detail', ${item.id})">${escapeHtml(item.name)}</h3>
+                                        <div class="text-brand-800 font-extrabold text-base">${formatMoney(item.price)} <span class="text-[10px] font-medium text-gray-400">giá trị ước tính</span></div>
+                                        <div class="bg-gray-50 p-2 rounded border border-dashed border-amber-300 text-gray-700">
+                                            <i class="fas fa-exchange-alt text-amber-600 mr-1"></i>
+                                            <span class="font-bold">Muốn đổi lấy:</span> ${escapeHtml(item.desiredExchange || 'Đồ có giá trị tương đương')}
+                                            <div class="text-[10px] text-gray-500 mt-0.5">Nhận món trị giá ${formatMoney(low)} – ${formatMoney(high)}</div>
+                                        </div>
+                                        <div class="pt-1 flex items-center justify-between gap-2">
+                                            <span class="text-gray-400 text-[10px] truncate"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(item.location)}</span>
+                                            ${mine
+                                                ? `<span class="text-gray-400 font-semibold whitespace-nowrap">Tin của bạn</span>`
+                                                : `<button onclick="openTradeOffer(${item.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex-shrink-0">Đề nghị đổi</button>`}
+                                        </div>
+                                    </div>
+                                </div>`;
+}
+
+// Mở hộp thoại chọn món của mình để đổi lấy `targetId`
+function openTradeOffer(targetId) {
+    const target = products.find(p => p.id === targetId);
+    if (!target) return;
     if (!state.user) {
         showToast('Vui lòng đăng nhập để gửi đề nghị đổi', 'error');
         promptLogin();
         return;
     }
-    if (item.owner === state.user.username) {
-        showToast('Đây là món đồ của bạn', 'error');
+    if (isAdminUser()) { showToast('Tài khoản quản trị chỉ dùng để kiểm tra và gỡ tin.', 'error'); return; }
+    if (target.owner === state.user.username) { showToast('Đây là món đồ của bạn', 'error'); return; }
+    if (target.type === 'buy') { showToast('Món này chỉ bán, không nhận trao đổi.', 'error'); return; }
+    if (target.availability !== 'available') { showToast('Món này không còn nhận trao đổi.', 'error'); return; }
+
+    const [low, high] = tradeRange(target.price);
+    const mine = products.filter(p => p.owner === state.user.username && p.availability === 'available' && p.type !== 'buy');
+    const fair = mine.filter(p => isFairTrade(p.price, target.price));
+    const header = `
+        <div class="flex items-start justify-between gap-3 border-b pb-3 mb-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="${escapeHtml(target.image)}" alt="" class="w-12 h-12 rounded object-cover bg-gray-100 flex-shrink-0">
+                <div class="min-w-0"><div class="text-[10px] text-gray-400 uppercase font-bold">Bạn muốn nhận</div>
+                    <div class="font-bold text-gray-800 truncate">${escapeHtml(target.name)}</div>
+                    <div class="text-brand-800 font-bold">${formatMoney(target.price)}</div></div>
+            </div>
+            <button onclick="closeModal()" aria-label="Đóng" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>`;
+
+    if (fair.length === 0) {
+        openModal(`${header}
+            <p class="text-gray-700 mb-2">Bạn chưa có món nào phù hợp để đổi lấy món này.</p>
+            <p class="text-gray-500 mb-4">Món dùng để đổi phải do bạn đăng, đang để chế độ <strong>trao đổi</strong> hoặc <strong>vừa bán vừa đổi</strong>, và có giá từ <strong>${formatMoney(low)}</strong> đến <strong>${formatMoney(high)}</strong>.${mine.length ? ` Bạn đang có ${mine.length} món khác nhưng chưa nằm trong khoảng giá này.` : ''}</p>
+            <div class="flex gap-2 justify-end">
+                <button onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Để sau</button>
+                <button onclick="closeModal(); switchChannel('seller')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg">Đăng món để đổi</button>
+            </div>`);
         return;
     }
-    const offeredItem = (prompt(`Nhập tên món đồ bạn muốn mang ra đổi lấy "${item.name}":`) || '').trim();
-    if (!offeredItem) return;
+    openModal(`${header}
+        <form onsubmit="submitTradeOffer(event, ${target.id})" class="space-y-3">
+            <fieldset class="space-y-2">
+                <legend class="font-bold text-gray-700 mb-1">Chọn món của bạn để đổi (giá ${formatMoney(low)} – ${formatMoney(high)})</legend>
+                ${fair.map((p, i) => `
+                    <label class="flex items-center gap-3 border rounded-lg p-2 cursor-pointer hover:border-amber-400 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
+                        <input type="radio" name="offered" value="${p.id}" ${i === 0 ? 'checked' : ''} class="accent-amber-600">
+                        <img src="${escapeHtml(p.image)}" alt="" class="w-10 h-10 rounded object-cover bg-gray-100 flex-shrink-0">
+                        <span class="flex-1 min-w-0 truncate">${escapeHtml(p.name)}</span>
+                        <span class="font-bold text-brand-800 whitespace-nowrap">${formatMoney(p.price)}</span>
+                    </label>`).join('')}
+            </fieldset>
+            <div>
+                <label for="to-phone" class="font-bold text-gray-700 block mb-1">Số điện thoại của bạn *</label>
+                <input id="to-phone" type="tel" required autocomplete="tel" placeholder="VD: 0901234567" class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-amber-500 outline-none">
+                <p class="text-gray-400 mt-1">Chỉ hiện cho chủ món khi họ đồng ý đổi.</p>
+            </div>
+            <div>
+                <label for="to-message" class="font-bold text-gray-700 block mb-1">Lời nhắn</label>
+                <textarea id="to-message" rows="2" maxlength="500" placeholder="VD: Món của mình còn bảo hành, có thể gặp trực tiếp ở Quận 1..." class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-amber-500 outline-none"></textarea>
+            </div>
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Hủy</button>
+                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-60">Gửi đề nghị đổi</button>
+            </div>
+        </form>`);
+}
+
+async function submitTradeOffer(e, targetId) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
     try {
-        await api(`/api/listings/${productId}/offers`, { method: 'POST', body: JSON.stringify({ offeredItem }) });
+        await api(`/api/listings/${targetId}/offers`, {
+            method: 'POST',
+            body: JSON.stringify({
+                offeredListingId: Number(e.target.elements.offered.value),
+                phone: document.getElementById('to-phone').value,
+                message: document.getElementById('to-message').value
+            })
+        });
+        closeModal();
         state.activity.offers = null; // tải lại ở trang Đơn hàng
-        showToast(`Đã gửi đề nghị đổi "${offeredItem}". Theo dõi phản hồi ở mục Đơn hàng.`);
+        showToast('Đã gửi đề nghị đổi. Theo dõi phản hồi ở mục Đơn hàng & trao đổi.');
     } catch (err) {
-        if (err.status === 401) { state.user = null; renderUserBar(); promptLogin(); }
+        if (err.status === 401) { closeModal(); state.user = null; renderUserBar(); promptLogin(); }
         showToast(err.message, 'error');
+        if (btn) btn.disabled = false;
+        if (err.status === 409 || err.status === 404) { await loadListings(); renderPage(); }
     }
 }
+
 
 // =====================================================
 // TRANG CHI TIẾT SẢN PHẨM & TÍNH NĂNG KHÁC (GIỮ NGUYÊN)
@@ -961,12 +1045,7 @@ function renderDetail() {
                                 <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-3 break-words">${escapeHtml(product.name)}</h1>
 
                                 <div class="flex items-center gap-4 text-xs mb-4 pb-4 border-b">
-                                    <div class="flex items-center gap-1 text-yellow-500">
-                                        <span class="font-bold underline text-brand-800">${product.rating}</span>
-                                        <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
-                                    </div>
-                                    <span class="text-gray-300">|</span>
-                                    <span class="text-gray-600"><strong class="text-gray-800">${product.sold}</strong> Đã Bán</span>
+                                    <span class="bg-brand-50 text-brand-800 font-bold px-2 py-0.5 rounded">Đồ cũ · chỉ còn 1 món</span>
                                     ${product.ownerName ? `
                                         <span class="text-gray-300">|</span>
                                         <span class="text-gray-600 truncate"><i class="far fa-user"></i> ${escapeHtml(product.ownerName)}</span>
@@ -1019,9 +1098,10 @@ function renderDetail() {
                                     </button>
                                 </div>`}
                             ${canOffer ? `
-                                <button onclick="makeTradeOffer(${product.id})" class="mt-3 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition shadow text-sm">
-                                    <i class="fas fa-exchange-alt mr-1"></i> Gửi Đề Nghị Đổi Đồ
-                                </button>` : ''}
+                                <button onclick="openTradeOffer(${product.id})" class="mt-3 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition shadow text-sm">
+                                    <i class="fas fa-exchange-alt mr-1"></i> Đề nghị đổi ngang giá
+                                </button>
+                                <p class="text-[11px] text-gray-500 mt-1.5 text-center">Đổi bằng món của bạn có giá ${formatMoney(tradeRange(product.price)[0])} – ${formatMoney(tradeRange(product.price)[1])}.</p>` : ''}
                         </div>
                     </div>
 
@@ -1635,16 +1715,94 @@ async function orderAction(id, action) {
     }
 }
 
-async function offerAction(id, action) {
-    if (action === 'accept' && !confirm('Chấp nhận đề nghị này? Món đồ sẽ được đánh dấu đã trao đổi và các đề nghị khác bị từ chối.')) return;
+// Chấp nhận đổi cần để lại số điện thoại cho bên kia, nên hỏi trong hộp thoại
+function offerAction(id, action) {
+    if (action !== 'accept') return sendOfferAction(id, action);
+    const offer = (state.activity.offers?.received || []).find(o => o.id === id);
+    if (!offer) return;
+    openModal(`
+        <h3 class="font-bold text-base text-gray-800 mb-3">Chấp nhận đổi?</h3>
+        <div class="space-y-1 mb-3 text-gray-600">
+            <p>Bạn đưa: <strong>${escapeHtml(offer.listingName)}</strong> (${formatMoney(offer.listingPrice)})</p>
+            <p>Bạn nhận: <strong>${escapeHtml(offer.offeredItem)}</strong> (${formatMoney(offer.offeredPrice)}) từ ${escapeHtml(offer.proposerName)}</p>
+            <p class="text-gray-400">Sau khi chấp nhận, cả hai món biến khỏi chợ, các đề nghị khác liên quan bị từ chối và hai bên thấy số điện thoại của nhau.</p>
+        </div>
+        <form onsubmit="confirmAcceptOffer(event, ${id})" class="space-y-3">
+            <div>
+                <label for="ao-phone" class="font-bold text-gray-700 block mb-1">Số điện thoại của bạn *</label>
+                <input id="ao-phone" type="tel" required autocomplete="tel" placeholder="VD: 0901234567" class="w-full border rounded-lg p-2.5 focus:ring-1 focus:ring-amber-500 outline-none">
+            </div>
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Để sau</button>
+                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-60">Đồng ý đổi</button>
+            </div>
+        </form>`);
+}
+
+async function confirmAcceptOffer(e, id) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    const ok = await sendOfferAction(id, 'accept', document.getElementById('ao-phone').value);
+    if (ok) closeModal();
+    else if (btn) btn.disabled = false;
+}
+
+async function sendOfferAction(id, action, phone) {
     try {
-        await api(`/api/offers/${id}`, { method: 'PATCH', body: JSON.stringify({ action }) });
-        showToast({ accept: 'Đã chấp nhận đề nghị đổi', reject: 'Đã từ chối đề nghị', withdraw: 'Đã rút đề nghị' }[action]);
+        await api(`/api/offers/${id}`, { method: 'PATCH', body: JSON.stringify({ action, phone }) });
+        showToast({ accept: 'Đã đồng ý đổi! Hai bên đã thấy số điện thoại của nhau.', reject: 'Đã từ chối đề nghị', withdraw: 'Đã rút đề nghị' }[action]);
         await Promise.all([loadActivity(), loadListings()]);
+        return true;
     } catch (err) {
         showToast(err.message, 'error');
         loadActivity();
+        return false;
     }
+}
+
+function offerRow(o, role) {
+    const pending = o.status === 'pending';
+    const give = role === 'received'
+        ? { name: o.listingName, image: o.listingImage, price: o.listingPrice }
+        : { name: o.offeredItem, image: o.offeredImage, price: o.offeredPrice };
+    const get = role === 'received'
+        ? { name: o.offeredItem, image: o.offeredImage, price: o.offeredPrice }
+        : { name: o.listingName, image: o.listingImage, price: o.listingPrice };
+    const side = (label, item) => `
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+            <img src="${escapeHtml(item.image || '')}" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0 bg-gray-100">
+            <div class="min-w-0"><div class="text-[10px] text-gray-400 uppercase font-bold">${label}</div>
+                <div class="font-semibold text-gray-800 truncate">${escapeHtml(item.name)}</div>
+                <div class="text-brand-800 font-bold">${formatMoney(item.price)}</div></div>
+        </div>`;
+    const phone = role === 'received' ? o.proposerPhone : o.ownerPhone;
+    const counterpart = role === 'received' ? o.proposerName : o.ownerName;
+    return `
+        <div class="border-b py-3 text-xs space-y-2">
+            <div class="flex items-center gap-2 flex-wrap">
+                ${badge(OFFER_STATUS[o.status] || OFFER_STATUS.pending)}
+                <span class="text-gray-500">${role === 'received' ? `<strong>${escapeHtml(o.proposerName)}</strong> muốn đổi với bạn` : `Bạn gửi đề nghị cho <strong>${escapeHtml(o.ownerName || 'chủ món')}</strong>`}</span>
+                <span class="text-gray-400">· ${new Date(o.createdAt).toLocaleString('vi-VN')}</span>
+            </div>
+            <div class="flex items-center gap-3">
+                ${side('Bạn đưa', give)}
+                <i class="fas fa-exchange-alt text-amber-600 flex-shrink-0"></i>
+                ${side('Bạn nhận', get)}
+            </div>
+            ${o.message ? `<div class="text-gray-500 break-words">“${escapeHtml(o.message)}”</div>` : ''}
+            ${o.status === 'accepted' && phone ? `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-green-900">
+                    <i class="fas fa-phone-alt"></i> Liên hệ ${escapeHtml(counterpart || 'đối phương')} để hẹn giao nhận: <a href="tel:${escapeHtml(phone)}" class="font-bold underline">${escapeHtml(phone)}</a>
+                </div>` : ''}
+            <div class="flex flex-wrap gap-1.5">
+                ${pending && role === 'received' ? `
+                    <button onclick="offerAction(${o.id}, 'accept')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded">Chấp nhận đổi</button>
+                    <button onclick="offerAction(${o.id}, 'reject')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
+                ${pending && role === 'sent' ? `<button onclick="offerAction(${o.id}, 'withdraw')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Rút đề nghị</button>` : ''}
+            </div>
+        </div>`;
 }
 
 function orderRow(o, role) {
@@ -1677,29 +1835,6 @@ function orderRow(o, role) {
         </div>`;
 }
 
-function offerRow(o, role) {
-    const pending = o.status === 'pending';
-    return `
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 text-xs border-b py-3">
-            <img src="${escapeHtml(o.listingImage)}" alt="" class="w-14 h-14 rounded object-cover flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${o.listingId})">
-            <div class="flex-1 min-w-0 space-y-0.5">
-                <div class="flex items-center gap-2 flex-wrap">
-                    <h4 class="font-semibold text-gray-800 truncate">${escapeHtml(o.listingName)}</h4>
-                    ${badge(OFFER_STATUS[o.status] || OFFER_STATUS.pending)}
-                </div>
-                <div class="text-gray-600 break-words"><i class="fas fa-exchange-alt text-amber-600"></i>
-                    ${role === 'received' ? `<strong>${escapeHtml(o.proposerName)}</strong> muốn đổi` : 'Bạn đề nghị đổi'}: <strong>${escapeHtml(o.offeredItem)}</strong></div>
-                ${o.message ? `<div class="text-gray-500 break-words">${escapeHtml(o.message)}</div>` : ''}
-                <div class="text-gray-400">${new Date(o.createdAt).toLocaleString('vi-VN')}</div>
-            </div>
-            <div class="flex flex-wrap gap-1.5 flex-shrink-0">
-                ${pending && role === 'received' ? `
-                    <button onclick="offerAction(${o.id}, 'accept')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded">Chấp nhận</button>
-                    <button onclick="offerAction(${o.id}, 'reject')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
-                ${pending && role === 'sent' ? `<button onclick="offerAction(${o.id}, 'withdraw')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Rút đề nghị</button>` : ''}
-            </div>
-        </div>`;
-}
 
 function renderOrders() {
     if (!state.user) return renderLogin();
@@ -1907,35 +2042,6 @@ function renderOrderSuccess() {
                     </div>
                 </div>
             `;
-}
-
-// Chỉ dùng MỘT interval cho toàn trang; trước đây mỗi lần về trang chủ lại tạo thêm interval mới
-let countdownTimer = null;
-function startCountdown() {
-    const updateTimer = () => {
-        const now = new Date().getTime();
-        // Hết giờ thì tự động bắt đầu phiên Flash Sale mới thay vì đứng im ở 00:00:00
-        if (state.flashSaleEndTime <= now) {
-            state.flashSaleEndTime = now + 24 * 3600 * 1000;
-        }
-        const distance = state.flashSaleEndTime - now;
-
-        const hours = Math.floor(distance / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-        const hElem = document.getElementById('timer-h');
-        const mElem = document.getElementById('timer-m');
-        const sElem = document.getElementById('timer-s');
-
-        if (hElem && mElem && sElem) {
-            hElem.innerText = hours < 10 ? '0' + hours : hours;
-            mElem.innerText = minutes < 10 ? '0' + minutes : minutes;
-            sElem.innerText = seconds < 10 ? '0' + seconds : seconds;
-        }
-    };
-    updateTimer();
-    if (!countdownTimer) countdownTimer = setInterval(updateTimer, 1000);
 }
 
 // INITIAL LOAD — chạy ngay khi DOM sẵn sàng, không đợi tải xong toàn bộ ảnh/font

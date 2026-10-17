@@ -55,7 +55,7 @@ router.post("/listings/:id/offers", requireLogin, writeLimiter, asyncRoute(async
 }));
 
 router.patch("/offers/:id", requireLogin, writeLimiter, asyncRoute(async (req, res) => {
-  res.json({ offer: await updateOffer(req.user, req.params.id, req.body?.action) });
+  res.json({ offer: await updateOffer(req.user, req.params.id, req.body?.action, req.body) });
 }));
 
 // --- THỐNG KÊ CHO ADMIN ---

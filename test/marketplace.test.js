@@ -107,7 +107,7 @@ test("đặt nhiều món: một món không còn thì không giữ chỗ món n
 
 test("không mua được tin của chính mình hoặc tin chỉ trao đổi", async () => {
   const own = await approvedListing(alice);
-  const tradeOnly = await approvedListing(bob, { type: "trade", price: 0 });
+  const tradeOnly = await approvedListing(bob, { type: "trade", price: 200_000 });
   await assert.rejects(placeOrder(alice, { items: [{ listingId: own.id }, { listingId: tradeOnly.id }], ...contact }),
     (error) => {
       assert.deepEqual(error.unavailable.map((u) => u.reason).sort(), ["own_listing", "trade_only"]);
@@ -181,31 +181,78 @@ test("gỡ tin đã bị gỡ trả 404", async () => {
   assert.equal((await listListings(admin)).length, 0);
 });
 
-test("đề nghị trao đổi: chấp nhận một đề nghị thì món đồ đã đổi, các đề nghị khác bị từ chối", async () => {
-  const listing = await approvedListing(alice, { type: "trade", price: 0 });
-  const fromBob = await createOffer(bob, listing.id, { offeredItem: "Loa JBL Go 3" });
-  const fromCarol = await createOffer(carol, listing.id, { offeredItem: "Bàn phím cơ" });
-  await rejects(createOffer(bob, listing.id, { offeredItem: "Chuột" }), 409); // đã có đề nghị đang chờ
-  await rejects(createOffer(alice, listing.id, { offeredItem: "Gì đó" }), 400); // món của chính mình
+const phone = (n) => ({ phone: `09012345${n}0` });
+
+test("đổi ngang giá: hai bên đồng ý thì cả hai món đã đổi, đề nghị khác liên quan bị từ chối", async () => {
+  const target = await approvedListing(alice, { name: "Máy ảnh", type: "trade", price: 1_000_000 });
+  const bobItem = await approvedListing(bob, { name: "Loa JBL", type: "trade", price: 1_080_000 });
+  const carolItem = await approvedListing(carol, { name: "Bàn phím cơ", type: "both", price: 950_000 });
+
+  const fromBob = await createOffer(bob, target.id, { offeredListingId: bobItem.id, ...phone(1) });
+  const fromCarol = await createOffer(carol, target.id, { offeredListingId: carolItem.id, ...phone(2) });
+  assert.equal(fromBob.offeredPrice, 1_080_000);
+  assert.equal(fromBob.proposerPhone, null, "chưa đồng ý thì chưa lộ số điện thoại");
+  await rejects(createOffer(bob, target.id, { offeredListingId: bobItem.id, ...phone(1) }), 409); // trùng đề nghị đang chờ
+  await rejects(createOffer(alice, target.id, { offeredListingId: target.id, ...phone(3) }), 400); // món của chính mình
 
   assert.equal((await listOffers(alice)).received.length, 2);
-  await rejects(updateOffer(bob, fromBob.id, "accept"), 403); // chỉ chủ món đồ được chấp nhận
+  await rejects(updateOffer(bob, fromBob.id, "accept", phone(1)), 403); // chỉ chủ món đồ được chấp nhận
+  await rejects(updateOffer(alice, fromBob.id, "accept", { phone: "abc" }), 400); // phải để lại số điện thoại
 
-  const accepted = await updateOffer(alice, fromBob.id, "accept");
+  const accepted = await updateOffer(alice, fromBob.id, "accept", phone(4));
   assert.equal(accepted.status, "accepted");
-  assert.equal(accepted.listingName, "Tai nghe Sony");
-  const sent = (await listOffers(carol)).sent;
-  assert.equal(sent.find((o) => o.id === fromCarol.id).status, "rejected");
-  assert.equal((await listListings(alice))[0].availability, "traded");
-  assert.equal((await listListings(null)).length, 0);
+  assert.equal(accepted.proposerPhone, "0901234510");
+  assert.equal(accepted.ownerPhone, "0901234540");
+
+  const mine = await listListings(alice);
+  assert.equal(mine.find((l) => l.id === target.id).availability, "traded");
+  assert.equal((await listListings(bob)).find((l) => l.id === bobItem.id).availability, "traded");
+  assert.deepEqual((await listListings(null)).map((l) => l.name), ["Bàn phím cơ"], "chỉ món chưa đổi còn trên chợ");
+  assert.equal((await listOffers(carol)).sent.find((o) => o.id === fromCarol.id).status, "rejected");
 });
 
-test("không chấp nhận đổi khi món đồ đang có đơn mua", async () => {
-  const listing = await approvedListing(alice, { type: "both" });
-  const offer = await createOffer(carol, listing.id, { offeredItem: "Máy ảnh" });
-  await placeOrder(bob, { items: [{ listingId: listing.id }], ...contact });
-  await rejects(updateOffer(alice, offer.id, "accept"), 409);
-  assert.equal((await updateOffer(carol, offer.id, "withdraw")).status, "withdrawn");
+test("đổi đồ chỉ cho món của chính mình, đang rao, và chênh giá không quá 10%", async () => {
+  const target = await approvedListing(alice, { type: "trade", price: 1_000_000 });
+  const cheap = await approvedListing(bob, { name: "Rẻ", type: "trade", price: 800_000 });
+  const justRight = await approvedListing(bob, { name: "Vừa", type: "trade", price: 900_000 });
+  const sellOnly = await approvedListing(bob, { name: "Chỉ bán", type: "buy", price: 1_000_000 });
+  const others = await approvedListing(carol, { name: "Của người khác", type: "trade", price: 1_000_000 });
+
+  await rejects(createOffer(bob, target.id, { offeredListingId: cheap.id, ...phone(1) }), 400); // lệch 20%
+  await rejects(createOffer(bob, target.id, { offeredListingId: sellOnly.id, ...phone(1) }), 400); // chỉ bán
+  await rejects(createOffer(bob, target.id, { offeredListingId: others.id, ...phone(1) }), 400); // không phải của bob
+  await rejects(createOffer(bob, target.id, { phone: "0901234567" }), 400); // chưa chọn món
+  await rejects(createOffer(bob, target.id, { offeredListingId: justRight.id, phone: "1" }), 400);
+  assert.equal((await createOffer(bob, target.id, { offeredListingId: justRight.id, ...phone(1) })).status, "pending");
+
+  const buyOnly = await approvedListing(alice, { name: "Mua đứt", type: "buy", price: 900_000 });
+  await rejects(createOffer(bob, buyOnly.id, { offeredListingId: justRight.id, ...phone(1) }), 400);
+});
+
+test("không chấp nhận đổi khi một trong hai món đang có đơn mua", async () => {
+  const target = await approvedListing(alice, { type: "both", price: 1_000_000 });
+  const bobItem = await approvedListing(bob, { name: "Loa", type: "both", price: 1_000_000 });
+  const offer = await createOffer(bob, target.id, { offeredListingId: bobItem.id, ...phone(1) });
+
+  await placeOrder(carol, { items: [{ listingId: bobItem.id }], ...contact });
+  await rejects(updateOffer(alice, offer.id, "accept", phone(2)), 409);
+  assert.equal((await updateOffer(bob, offer.id, "withdraw")).status, "withdrawn");
+});
+
+test("món đã bán xong thì các đề nghị đổi liên quan bị từ chối; gỡ món đem đi đổi thì đề nghị biến mất", async () => {
+  const target = await approvedListing(alice, { type: "both", price: 1_000_000 });
+  const bobItem = await approvedListing(bob, { name: "Loa", type: "both", price: 1_000_000 });
+  const carolItem = await approvedListing(carol, { name: "Chuột", type: "both", price: 1_000_000 });
+  const fromBob = await createOffer(bob, target.id, { offeredListingId: bobItem.id, ...phone(1) });
+  await createOffer(carol, target.id, { offeredListingId: carolItem.id, ...phone(2) });
+
+  await deleteListing(carol, carolItem.id);
+  assert.equal((await listOffers(alice)).received.length, 1);
+
+  const [order] = await placeOrder(carol, { items: [{ listingId: target.id }], ...contact });
+  await updateOrder(alice, order.id, "confirm");
+  await updateOrder(carol, order.id, "complete");
+  assert.equal((await listOffers(bob)).sent.find((o) => o.id === fromBob.id).status, "rejected");
 });
 
 test("thống kê admin đếm tin, đơn và đề nghị", async () => {

@@ -70,7 +70,7 @@ Không có đăng ký: tài khoản khai báo sẵn trong biến `AUTH_USERS` (J
 Mua bán và trao đổi (mỗi tin là **một món** đồ cũ):
 - Đặt hàng giữ chỗ món đồ ngay trong một transaction có khóa dòng: hai người không thể mua trùng một món. Giá lấy từ database, không tin giá trình duyệt gửi lên.
 - Quy trình escrow: `pending` (chờ người bán xác nhận) → `confirmed` (đang giao) → `completed` (người mua bấm "Đã nhận hàng", món đồ thành "đã bán"). Trước khi hoàn tất, người mua, người bán hoặc admin đều hủy được; hủy thì món đồ quay lại chợ.
-- Đề nghị trao đổi: người đăng tin chấp nhận một đề nghị thì món đồ thành "đã đổi" và các đề nghị khác tự bị từ chối. Không chấp nhận được khi món đang có đơn mua.
+- Đổi ngang giá: người đề nghị chọn một món do chính họ đăng (đang để trao đổi), giá chênh tối đa 10% (`TRADE_TOLERANCE_PERCENT`). Chủ món chấp nhận thì cả hai món thành "đã đổi", các đề nghị khác liên quan tự bị từ chối, hai bên thấy SĐT của nhau. Không chấp nhận được khi một trong hai món đang có đơn mua.
 - Không gỡ được tin đang có đơn chờ xử lý.
 
 ## Test
@@ -99,9 +99,9 @@ Chỉ định giá khi AI xác định được model với `identification_conf
 | `POST /api/orders` | đăng nhập | `{ items: [{ listingId, variant }], phone, address, note }`; 409 kèm `unavailable` nếu có món không còn |
 | `GET /api/orders` | đăng nhập | `{ purchases, sales }` |
 | `PATCH /api/orders/:id` | người trong đơn, admin | `{ action: "confirm" \| "complete" \| "cancel" }` |
-| `POST /api/listings/:id/offers` | đăng nhập | `{ offeredItem, message }` |
+| `POST /api/listings/:id/offers` | đăng nhập | `{ offeredListingId, phone, message }` |
 | `GET /api/offers` | đăng nhập | `{ received, sent }` |
-| `PATCH /api/offers/:id` | chủ tin / người gửi | `{ action: "accept" \| "reject" \| "withdraw" }` |
+| `PATCH /api/offers/:id` | chủ tin / người gửi | `{ action: "accept" | "reject" | "withdraw", phone }` (`phone` bắt buộc khi accept) |
 
 Lỗi luôn trả JSON `{ "error": "..." }` bằng tiếng Việt.
 
