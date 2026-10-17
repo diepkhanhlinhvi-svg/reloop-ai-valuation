@@ -4,7 +4,7 @@ import { requireAdmin, requireLogin } from "../auth.js";
 import { asyncRoute } from "../lib/http-error.js";
 import { createLimiter } from "../lib/rate-limit-store.js";
 import {
-  listListings, createListing, deleteListing,
+  listListings, createListing, deleteListing, TRADE_TOLERANCE_PERCENT,
   placeOrder, listOrders, updateOrder,
   createOffer, listOffers, updateOffer,
   marketplaceSummary
@@ -20,7 +20,7 @@ const writeLimiter = createLimiter("write", {
 
 // --- TIN ĐĂNG ---
 router.get("/listings", asyncRoute(async (req, res) => {
-  res.json({ listings: await listListings(req.user) });
+  res.json({ listings: await listListings(req.user), tradeTolerancePercent: TRADE_TOLERANCE_PERCENT });
 }));
 
 router.post("/listings", requireLogin, writeLimiter, asyncRoute(async (req, res) => {

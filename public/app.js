@@ -50,6 +50,8 @@ async function loadListings() {
     try {
         const data = await api('/api/listings');
         products.splice(0, products.length, ...(data.listings || []));
+        // Máy chủ là nguồn đúng của quy tắc đổi ngang giá
+        if (Number.isFinite(data.tradeTolerancePercent)) TRADE_TOLERANCE_PERCENT = data.tradeTolerancePercent;
         syncCart();
     } catch (err) {
         console.error(err);
@@ -268,6 +270,13 @@ function updateChannelButtons() {
 }
 
 function switchChannel(channelName) {
+    // Bộ lọc/tìm kiếm của kênh này không áp sang kênh khác
+    if (channelName !== state.channel) {
+        state.categoryFilter = 'all';
+        state.searchQuery = '';
+        const input = document.getElementById('search-input');
+        if (input) input.value = '';
+    }
     state.channel = channelName;
     state.currentPage = 'home';
     updateChannelButtons();
@@ -768,6 +777,10 @@ async function handleUploadProduct(e) {
 // Sau khi đăng: tin hiện ngay trên chợ (không thêm trùng nếu máy chủ trả lại tin đã có)
 function publishedListing(listing) {
     if (!products.some(p => p.id === listing.id)) products.unshift(listing);
+    if (listing.duplicate) {
+        showToast('Tin này bạn vừa đăng rồi nên không tạo thêm. Nếu muốn đổi ảnh hoặc nội dung, hãy gỡ tin cũ rồi đăng lại.', 'error');
+        return;
+    }
     showToast('Đã đăng sản phẩm thành công!');
     switchChannel(listing.type === 'trade' ? 'trade' : 'buyer');
 }
@@ -775,8 +788,8 @@ function publishedListing(listing) {
 // =====================================================
 // 3. KÊNH TRAO ĐỔI SẢN PHẨM (TRADING CHANNEL)
 // =====================================================
-// Đổi ngang giá: hai món chênh nhau tối đa bấy nhiêu phần trăm (máy chủ kiểm tra lại, phải khớp số này)
-const TRADE_TOLERANCE_PERCENT = 10;
+// Đổi ngang giá: hai món chênh nhau tối đa bấy nhiêu phần trăm. Số này lấy từ máy chủ khi tải tin (10 là giá trị dự phòng)
+let TRADE_TOLERANCE_PERCENT = 10;
 
 function isFairTrade(priceA, priceB) {
     const high = Math.max(priceA, priceB);
@@ -1371,7 +1384,8 @@ async function publishAIProduct() {
         });
         resetAIValuation();
         if (!products.some(p => p.id === data.listing.id)) products.unshift(data.listing);
-        showToast('Đã đăng sản phẩm thành công!');
+        showToast(data.listing.duplicate ? 'Tin này bạn vừa đăng rồi nên không tạo thêm.' : 'Đã đăng sản phẩm thành công!',
+            data.listing.duplicate ? 'error' : 'success');
         navigateTo('detail', data.listing.id);
     } catch (err) {
         if (err.status === 401) { state.user = null; renderUserBar(); promptLogin('ai-valuation'); }
@@ -1797,8 +1811,9 @@ function offerRow(o, role) {
                     <i class="fas fa-phone-alt"></i> Liên hệ ${escapeHtml(counterpart || 'đối phương')} để hẹn giao nhận: <a href="tel:${escapeHtml(phone)}" class="font-bold underline">${escapeHtml(phone)}</a>
                 </div>` : ''}
             <div class="flex flex-wrap gap-1.5">
+                ${pending && o.tradable === false ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Một trong hai món đang có đơn mua hoặc đã bán/đổi nên chưa thể chấp nhận. Bạn có thể từ chối hoặc chờ.</span>` : ''}
                 ${pending && role === 'received' ? `
-                    <button onclick="offerAction(${o.id}, 'accept')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded">Chấp nhận đổi</button>
+                    ${o.tradable === false ? '' : `<button onclick="offerAction(${o.id}, 'accept')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded">Chấp nhận đổi</button>`}
                     <button onclick="offerAction(${o.id}, 'reject')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
                 ${pending && role === 'sent' ? `<button onclick="offerAction(${o.id}, 'withdraw')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Rút đề nghị</button>` : ''}
             </div>
