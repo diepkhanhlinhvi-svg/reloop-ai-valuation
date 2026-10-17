@@ -197,8 +197,8 @@ Sửa xong nhớ chạy lại `npx vercel --prod`.
 
 1. Mở link web → bấm **Đăng nhập** (góc trên phải). Nếu đã thêm `DEMO_LOGIN=true` sẽ thấy 3 nút đăng nhập nhanh admin/user1/user2.
 2. Bấm nút đăng nhập nhanh `user1` (hoặc gõ `user1` với mật khẩu lấy trong `AUTH_USERS` ở file `.env`, phần `"password":"..."` của user1).
-3. Vào **Kênh Người Bán** → đăng thử 1 sản phẩm → thấy thông báo "chờ quản trị viên duyệt".
-4. Đăng xuất (bấm tên ở góc trên phải → **Đăng xuất**), đăng nhập `admin` → vào **Quản trị** → bấm **Duyệt**.
+3. Vào **Kênh Người Bán** → đăng thử 1 sản phẩm → sản phẩm hiện ngay trên chợ.
+4. Đăng xuất, đăng nhập `admin` → vào **Quản trị** → thấy tin vừa đăng và nút **Gỡ tin**.
 5. Đăng xuất, quay về trang chủ → sản phẩm phải hiện ra cho mọi người.
 6. Đăng nhập `user2` → mở sản phẩm → **Mua Ngay** → nhập SĐT, địa chỉ → **Xác Nhận Đặt Hàng**.
    Sản phẩm phải biến khỏi chợ (đã có người đặt).

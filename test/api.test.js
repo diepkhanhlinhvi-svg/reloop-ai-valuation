@@ -6,7 +6,8 @@ process.env.AUTH_SECRET = "test-secret";
 process.env.AUTH_USERS = JSON.stringify([
   { username: "admin", password: "adminpass", role: "admin", name: "Quản trị viên" },
   { username: "user1", password: "pass1", role: "user", name: "Người dùng 1" },
-  { username: "user2", password: "pass2", role: "user", name: "Người dùng 2" }
+  { username: "user2", password: "pass2", role: "user", name: "Người dùng 2" },
+  { username: "user3", password: "pass3", role: "user", name: "Người dùng 3" }
 ]);
 
 let server;
@@ -48,9 +49,8 @@ test("đăng bán, duyệt, mua và đồng bộ trạng thái qua API", async (
   assert.equal(created.status, 201);
   const id = created.body.listing.id;
 
-  assert.equal((await call(`/api/listings/${id}`, { method: "PATCH", cookie: seller, body: { status: "approved" } })).status, 403);
-  assert.equal((await call(`/api/listings/${id}`, { method: "PATCH", cookie: adminCookie, body: { status: "approved" } })).status, 200);
-  assert.equal((await call("/api/listings")).body.listings.length, 1);
+  assert.equal((await call("/api/listings")).body.listings.length, 1, "tin hiện ngay, không chờ duyệt");
+  assert.equal((await call("/api/listings", { method: "POST", cookie: adminCookie, body: { name: "Loa", price: 500_000 } })).status, 403);
 
   const order = await call("/api/orders", {
     method: "POST", cookie: buyer,
@@ -59,12 +59,24 @@ test("đăng bán, duyệt, mua và đồng bộ trạng thái qua API", async (
   assert.equal(order.status, 201);
   assert.equal((await call("/api/listings")).body.listings.length, 0, "món đã có người mua biến khỏi chợ");
 
+  const own = await call("/api/orders", {
+    method: "POST", cookie: seller,
+    body: { items: [{ listingId: id }], phone: "0901234567", address: "12 Nguyễn Huệ" }
+  });
+  assert.equal(own.status, 409, "người bán không tự mua được tin của mình");
+  assert.equal(own.body.unavailable[0].reason, "own_listing");
+
   const again = await call("/api/orders", {
     method: "POST", cookie: adminCookie,
     body: { items: [{ listingId: id }], phone: "0901234567", address: "12 Nguyễn Huệ" }
   });
-  assert.equal(again.status, 409);
-  assert.equal(again.body.unavailable[0].id, id, "lỗi 409 trả về món nào không còn để frontend gỡ khỏi giỏ");
+  assert.equal(again.status, 403, "admin không mua được");
+  const late = await call("/api/orders", {
+    method: "POST", cookie: await login("user3", "pass3"),
+    body: { items: [{ listingId: id }], phone: "0901234567", address: "12 Nguyễn Huệ" }
+  });
+  assert.equal(late.status, 409);
+  assert.equal(late.body.unavailable[0].id, id, "lỗi 409 trả về món nào không còn để frontend gỡ khỏi giỏ");
 
   const orderId = order.body.orders[0].id;
   assert.equal((await call(`/api/orders/${orderId}`, { method: "PATCH", cookie: seller, body: { action: "confirm" } })).body.order.status, "confirmed");

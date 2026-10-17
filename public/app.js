@@ -57,10 +57,12 @@ async function loadListings() {
     }
 }
 
-// Chợ (mua/trao đổi) chỉ hiện tin đã được duyệt và món đồ còn chưa có người mua/đổi
+// Chợ (mua/trao đổi) chỉ hiện món đồ còn chưa có người mua/đổi
 function marketProducts() {
-    return products.filter(p => p.status === 'approved' && p.availability === 'available');
+    return products.filter(p => p.availability === 'available');
 }
+
+const isAdminUser = () => state.user?.role === 'admin';
 
 // --- GIỎ HÀNG (lưu trong trình duyệt; máy chủ kiểm tra lại giá và tình trạng khi đặt) ---
 function loadCart() {
@@ -93,8 +95,8 @@ function syncCart() {
 // Lý do một món không mua được (null = mua được)
 function buyBlocker(p) {
     if (!p) return 'Sản phẩm không tồn tại hoặc đã bị gỡ.';
+    if (isAdminUser()) return 'Tài khoản quản trị chỉ dùng để kiểm tra và gỡ tin.';
     if (state.user && p.owner === state.user.username) return 'Đây là tin đăng của bạn.';
-    if (p.status !== 'approved') return 'Tin này chưa được duyệt.';
     if (p.availability === 'reserved') return 'Món này đã có người đặt mua.';
     if (p.availability === 'sold') return 'Món này đã được bán.';
     if (p.availability === 'traded') return 'Món này đã được trao đổi.';
@@ -110,11 +112,7 @@ function canManage(p) {
     return Boolean(state.user && (state.user.role === 'admin' || p.owner === state.user.username));
 }
 
-const STATUS_BADGES = {
-    approved: ['Đang hiện', 'bg-green-100 text-green-800'],
-    pending: ['Chờ duyệt', 'bg-yellow-100 text-yellow-800'],
-    rejected: ['Bị từ chối', 'bg-red-100 text-red-700']
-};
+const LISTED_BADGE = ['Đang hiện', 'bg-green-100 text-green-800'];
 
 const AVAILABILITY_BADGES = {
     reserved: ['Có người đặt', 'bg-blue-100 text-blue-800'],
@@ -122,10 +120,9 @@ const AVAILABILITY_BADGES = {
     traded: ['Đã đổi', 'bg-amber-100 text-amber-800']
 };
 
-// Tin đã duyệt thì hiện tình trạng mua bán (đã đặt/đã bán/đã đổi) nếu có
+// Hiện tình trạng mua bán (đã đặt/đã bán/đã đổi) nếu có, không thì "Đang hiện"
 function statusBadge(p) {
-    const [label, cls] = (p.status === 'approved' && AVAILABILITY_BADGES[p.availability])
-        || STATUS_BADGES[p.status] || STATUS_BADGES.pending;
+    const [label, cls] = AVAILABILITY_BADGES[p.availability] || LISTED_BADGE;
     return `<span class="${cls} text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">${label}</span>`;
 }
 
@@ -224,19 +221,6 @@ async function deleteListing(id) {
         if (state.currentPage === 'admin') loadAdminStats();
         if (state.currentPage === 'detail') navigateTo('home');
         else renderPage();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-}
-
-async function moderateListing(id, status) {
-    try {
-        const data = await api(`/api/listings/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
-        const index = products.findIndex(p => p.id === id);
-        if (index >= 0) products[index] = data.listing;
-        showToast(status === 'approved' ? 'Đã duyệt tin đăng' : 'Đã từ chối tin đăng');
-        loadAdminStats();
-        renderPage();
     } catch (err) {
         showToast(err.message, 'error');
     }
@@ -627,6 +611,16 @@ function renderSellerChannel() {
                 </div>
             `;
     }
+    if (isAdminUser()) {
+        return `
+                <div class="bg-white rounded-xl shadow-sm p-8 text-center max-w-lg mx-auto border border-brand-100">
+                    <div class="w-14 h-14 rounded-full bg-yellow-50 text-yellow-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-user-shield"></i></div>
+                    <h2 class="text-base font-bold text-gray-800 mb-1">Tài khoản quản trị không đăng bán</h2>
+                    <p class="text-xs text-gray-500 mb-5">Quản trị viên chỉ kiểm tra tin đăng và gỡ tin vi phạm. Hãy dùng tài khoản người dùng để mua bán.</p>
+                    <button onclick="navigateTo('admin')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Về trang quản trị</button>
+                </div>
+            `;
+    }
     const mine = myProducts();
     const sales = state.activity.orders?.sales || [];
     const revenue = sales.filter(o => o.status === 'completed').reduce((sum, o) => sum + o.price, 0);
@@ -711,9 +705,7 @@ function renderSellerChannel() {
                                     class="w-full border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-brand-600 outline-none"></textarea>
                             </div>
 
-                            ${state.user.role !== 'admin' ? `
-                                <p class="text-gray-500 flex items-center gap-1.5"><i class="fas fa-info-circle text-brand-600"></i> Tin đăng sẽ hiển thị trên chợ sau khi quản trị viên duyệt.</p>
-                            ` : ''}
+                            <p class="text-gray-500 flex items-center gap-1.5"><i class="fas fa-info-circle text-brand-600"></i> Tin đăng sẽ hiển thị ngay trên chợ. Quản trị viên có thể gỡ tin nếu vi phạm.</p>
                             <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
                                 <i class="fas fa-check-circle mr-1"></i> Đăng Bán Ngay
                             </button>
@@ -730,7 +722,7 @@ function renderSellerChannel() {
                                     <div class="text-[10px] text-gray-500 uppercase font-bold">Doanh Thu</div>
                                 </div>
                                 <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                    <div class="text-lg font-black text-blue-800">${mine.filter(p => p.status === 'approved' && p.availability === 'available').length}</div>
+                                    <div class="text-lg font-black text-blue-800">${mine.filter(p => p.availability === 'available').length}</div>
                                     <div class="text-[10px] text-gray-500 uppercase font-bold">Sản Phẩm Đang Đăng</div>
                                 </div>
                             </div>
@@ -789,8 +781,12 @@ async function previewUploadImage(input) {
     }
 }
 
+// Chặn bấm đăng nhiều lần: mọi lần bấm khi một yêu cầu đăng tin đang chạy đều bị bỏ qua
+let publishing = false;
+
 async function handleUploadProduct(e) {
     e.preventDefault();
+    if (publishing) return;
     const submitBtn = e.target.querySelector('button[type="submit"]');
     const name = document.getElementById('up-name').value.trim();
     const price = Math.max(0, Number(document.getElementById('up-price').value) || 0);
@@ -804,6 +800,7 @@ async function handleUploadProduct(e) {
     if (!name) { showToast('Vui lòng nhập tên sản phẩm', 'error'); return; }
     if (type !== 'trade' && price <= 0) { showToast('Vui lòng nhập giá bán hợp lệ', 'error'); return; }
 
+    publishing = true;
     if (submitBtn) submitBtn.disabled = true;
     try {
         // Bỏ trống ảnh -> máy chủ dùng ảnh mặc định
@@ -821,17 +818,14 @@ async function handleUploadProduct(e) {
         if (err.status === 401) { state.user = null; renderUserBar(); promptLogin('seller'); }
         showToast(err.message, 'error');
         if (submitBtn) submitBtn.disabled = false;
+    } finally {
+        publishing = false;
     }
 }
 
-// Sau khi đăng: tin của admin hiện ngay, tin của user chờ duyệt
+// Sau khi đăng: tin hiện ngay trên chợ (không thêm trùng nếu máy chủ trả lại tin đã có)
 function publishedListing(listing) {
-    products.unshift(listing);
-    if (listing.status !== 'approved') {
-        showToast('Đã gửi tin đăng! Tin sẽ hiển thị sau khi quản trị viên duyệt.');
-        switchChannel('seller');
-        return;
-    }
+    if (!products.some(p => p.id === listing.id)) products.unshift(listing);
     showToast('Đã đăng sản phẩm thành công!');
     switchChannel(listing.type === 'trade' ? 'trade' : 'buyer');
 }
@@ -935,7 +929,7 @@ function renderDetail() {
     if (!(state.selectedVariantIndex < variants.length)) state.selectedVariantIndex = 0;
     const canBuy = !buyBlocker(product);
     const isMine = Boolean(state.user && product.owner === state.user.username);
-    const canOffer = product.type !== 'buy' && product.status === 'approved' && product.availability === 'available' && !isMine;
+    const canOffer = product.type !== 'buy' && product.availability === 'available' && !isMine && !isAdminUser();
     // Tin chỉ trao đổi còn nhận đổi: không hiện thông báo "không bán", chỉ hiện nút gửi đề nghị đổi
     const blocker = canBuy || canOffer ? null : buyBlocker(product);
 
@@ -958,10 +952,10 @@ function renderDetail() {
 
                         <div class="flex flex-col justify-between min-w-0">
                             <div>
-                                ${product.status !== 'approved' ? `
+                                ${product.availability !== 'available' ? `
                                     <div class="mb-3 bg-yellow-50 border border-yellow-200 p-2.5 rounded-lg text-xs text-yellow-900 flex items-center gap-2">
                                         ${statusBadge(product)}
-                                        <span>${product.status === 'rejected' ? 'Tin này đã bị từ chối và không hiển thị trên chợ.' : 'Tin này chưa hiển thị trên chợ cho tới khi được duyệt.'}</span>
+                                        <span>Tin này không còn hiển thị trên chợ.</span>
                                     </div>
                                 ` : ''}
                                 <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-3 break-words">${escapeHtml(product.name)}</h1>
@@ -1266,6 +1260,7 @@ function guessCategory(text) {
 }
 
 async function publishAIProduct() {
+    if (publishing) return;
     const r = state.ai.result;
     if (!r || !r.price) return;
     if (!state.user) {
@@ -1275,6 +1270,7 @@ async function publishAIProduct() {
     }
     const grade = r.condition?.grade || 'Chưa xác định';
     const score = Number.isFinite(r.condition?.score) ? ` (${r.condition.score}/100)` : '';
+    publishing = true;
     try {
         const data = await api('/api/listings', {
             method: 'POST',
@@ -1294,14 +1290,14 @@ async function publishAIProduct() {
             })
         });
         resetAIValuation();
-        products.unshift(data.listing);
-        showToast(data.listing.status === 'approved'
-            ? 'Đã đăng sản phẩm thành công!'
-            : 'Đã gửi tin đăng! Tin sẽ hiển thị sau khi quản trị viên duyệt.');
+        if (!products.some(p => p.id === data.listing.id)) products.unshift(data.listing);
+        showToast('Đã đăng sản phẩm thành công!');
         navigateTo('detail', data.listing.id);
     } catch (err) {
         if (err.status === 401) { state.user = null; renderUserBar(); promptLogin('ai-valuation'); }
         showToast(err.message, 'error');
+    } finally {
+        publishing = false;
     }
 }
 
@@ -1601,8 +1597,7 @@ async function loadActivity() {
     state.activity.loading = true;
     state.activity.error = null;
     try {
-        const scope = state.user.role === 'admin' ? '?scope=all' : '';
-        const [orders, offers] = await Promise.all([api(`/api/orders${scope}`), api('/api/offers')]);
+        const [orders, offers] = await Promise.all([api('/api/orders'), api('/api/offers')]);
         state.activity.orders = orders;
         state.activity.offers = offers;
     } catch (err) {
@@ -1654,9 +1649,8 @@ async function offerAction(id, action) {
 
 function orderRow(o, role) {
     const me = state.user;
-    const isAdmin = me.role === 'admin';
-    const canConfirm = o.status === 'pending' && (o.seller === me.username || isAdmin);
-    const canComplete = o.status === 'confirmed' && (o.buyer === me.username || isAdmin);
+    const canConfirm = o.status === 'pending' && o.seller === me.username;
+    const canComplete = o.status === 'confirmed' && o.buyer === me.username;
     const canCancel = ['pending', 'confirmed'].includes(o.status);
     const counterpart = role === 'sale'
         ? `Người mua: <strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.phone)} · ${escapeHtml(o.address)}`
@@ -1714,8 +1708,7 @@ function renderOrders() {
         ['purchases', 'Đơn mua', orders?.purchases],
         ['sales', 'Đơn bán', orders?.sales],
         ['received', 'Đề nghị đổi nhận được', offers?.received],
-        ['sent', 'Đề nghị đổi đã gửi', offers?.sent],
-        ...(state.user.role === 'admin' ? [['all', 'Tất cả đơn (admin)', orders?.all]] : [])
+        ['sent', 'Đề nghị đổi đã gửi', offers?.sent]
     ];
     const current = tabs.find(t => t[0] === tab) || tabs[0];
     const rows = current[2] || [];
@@ -1725,11 +1718,10 @@ function renderOrders() {
         purchases: waitingCount(orders?.purchases, o => o.status === 'confirmed'),
         received: waitingCount(offers?.received, o => o.status === 'pending')
     };
-    const empty = { purchases: 'Bạn chưa mua món nào.', sales: 'Chưa có ai đặt mua đồ của bạn.', received: 'Chưa có đề nghị đổi nào.', sent: 'Bạn chưa gửi đề nghị đổi nào.', all: 'Chưa có đơn hàng nào.' }[current[0]];
+    const empty = { purchases: 'Bạn chưa mua món nào.', sales: 'Chưa có ai đặt mua đồ của bạn.', received: 'Chưa có đề nghị đổi nào.', sent: 'Bạn chưa gửi đề nghị đổi nào.' }[current[0]];
     const renderRow = {
         purchases: o => orderRow(o, 'purchase'),
         sales: o => orderRow(o, 'sale'),
-        all: o => orderRow(o, 'admin'),
         received: o => offerRow(o, 'received'),
         sent: o => offerRow(o, 'sent')
     }[current[0]];
@@ -1852,9 +1844,7 @@ function adminListingRow(p) {
             </div>
             <div class="flex flex-wrap items-center justify-end gap-1.5 flex-shrink-0">
                 ${statusBadge(p)}
-                ${p.status !== 'approved' ? `<button onclick="moderateListing(${p.id}, 'approved')" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-2.5 py-1 rounded">Duyệt</button>` : ''}
-                ${p.status === 'pending' ? `<button onclick="moderateListing(${p.id}, 'rejected')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
-                <button onclick="deleteListing(${p.id})" class="text-red-600 hover:underline px-1">Gỡ</button>
+                <button onclick="deleteListing(${p.id})" class="border border-red-200 text-red-600 font-bold px-2.5 py-1 rounded hover:bg-red-50">Gỡ tin</button>
             </div>
         </div>`;
 }
@@ -1871,8 +1861,6 @@ function renderAdmin() {
     const { stats, loading, error } = state.admin;
     const total = stats?.usage?.total || {};
     const today = stats?.usage?.today || {};
-    const pending = products.filter(p => p.status === 'pending');
-    const others = products.filter(p => p.status !== 'pending');
     const pair = (key) => `${today[key] || 0} / ${total[key] || 0}`;
 
     return `
@@ -1891,22 +1879,17 @@ function renderAdmin() {
                             ${statTile('Lượt gọi Gemini', pair('gemini_calls'), '', 'bg-blue-50 border-blue-100')}
                             ${statTile('Lượt gọi Tavily', pair('tavily_calls'), 'Gói Free: 1.000 credit/tháng', 'bg-amber-50 border-amber-100')}
                             ${statTile('Lượt đăng nhập', pair('logins'), '', 'bg-gray-50 border-gray-200')}
-                            ${statTile('Tin đăng', stats?.listings?.total ?? '—', stats ? `Chờ ${stats.listings.pending} · Duyệt ${stats.listings.approved} · Từ chối ${stats.listings.rejected}` : '', 'bg-purple-50 border-purple-100')}
+                            ${statTile('Tin đăng', stats?.listings?.total ?? '—', stats ? `Hiển thị ${stats.listings.available} · Đã đặt/bán/đổi ${stats.listings.total - stats.listings.available}` : '', 'bg-purple-50 border-purple-100')}
                             ${statTile('Món đồ', stats ? stats.listings.available : '—', stats ? `Đang đặt ${stats.listings.reserved} · Đã bán ${stats.listings.sold} · Đã đổi ${stats.listings.traded}` : '', 'bg-teal-50 border-teal-100')}
                             ${statTile('Đơn hàng', stats ? Object.values(stats.orders || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.orders?.pending || 0} · Giao ${stats.orders?.confirmed || 0} · Xong ${stats.orders?.completed || 0} · Hủy ${stats.orders?.cancelled || 0}` : '', 'bg-blue-50 border-blue-100')}
                             ${statTile('Đề nghị đổi', stats ? Object.values(stats.offers || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.offers?.pending || 0} · Chấp nhận ${stats.offers?.accepted || 0}` : '', 'bg-amber-50 border-amber-100')}
                         </div>
-                        <button onclick="openActivity('all')" class="mt-4 text-xs border border-brand-200 text-brand-800 font-bold px-3 py-1.5 rounded-lg hover:bg-brand-50"><i class="fas fa-receipt"></i> Xem tất cả đơn hàng</button>
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm p-5 border">
-                        <h2 class="text-base font-bold text-gray-800 border-l-4 border-yellow-500 pl-3 mb-3 uppercase">Tin Chờ Duyệt (${pending.length})</h2>
-                        ${pending.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Không có tin nào đang chờ duyệt.</p>` : pending.map(adminListingRow).join('')}
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm p-5 border">
-                        <h2 class="text-base font-bold text-gray-800 border-l-4 border-brand-700 pl-3 mb-3 uppercase">Tất Cả Tin Đăng (${others.length})</h2>
-                        ${others.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Chưa có tin đăng nào.</p>` : others.map(adminListingRow).join('')}
+                        <h2 class="text-base font-bold text-gray-800 border-l-4 border-brand-700 pl-3 mb-1 uppercase">Kiểm Tra Tin Đăng (${products.length})</h2>
+                        <p class="text-[11px] text-gray-500 mb-3">Tin hiện ngay khi người bán đăng. Gỡ tin nếu thấy vi phạm.</p>
+                        ${products.length === 0 ? `<p class="text-xs text-gray-400 text-center py-4">Chưa có tin đăng nào.</p>` : products.map(adminListingRow).join('')}
                     </div>
                 </div>
             `;

@@ -55,8 +55,8 @@ Giới hạn cần biết trên Vercel:
 
 ## Tài khoản
 Không có đăng ký: tài khoản khai báo sẵn trong biến `AUTH_USERS` (JSON), mỗi tài khoản gồm `username`, `password`, `role` (`admin` | `user`), `name`.
-- **user**: đăng tin bán/trao đổi (chờ admin duyệt mới hiện lên chợ), gỡ tin của mình.
-- **admin**: tin đăng hiện ngay; trang **Quản trị** để duyệt/từ chối/gỡ mọi tin và xem thống kê (lượt định giá, lượt gọi Gemini/Tavily, đăng nhập, số tin).
+- **user**: đăng tin bán/trao đổi (hiện ngay trên chợ), mua hàng, gỡ tin của mình; không tự mua được tin của chính mình.
+- **admin**: chỉ kiểm tra và gỡ tin vi phạm trên trang **Quản trị**, xem thống kê. Không đăng, mua, trao đổi hay xử lý đơn.
 - Định giá AI và xem chợ không cần đăng nhập; đặt hàng và gửi đề nghị đổi cần đăng nhập.
 - `DEMO_LOGIN=true` hiện nút đăng nhập nhanh từng tài khoản (không cần mật khẩu) ở trang đăng nhập. Dự án này bật cả trên Vercel để công khai 3 tài khoản (ai cũng vào được admin, chấp nhận vì là dự án cá nhân).
 - Thêm/đổi mật khẩu: sửa `AUTH_USERS` rồi khởi động lại server (trên Vercel: Redeploy). Phiên đăng nhập cũ của tài khoản bị đổi mật khẩu tự hết hiệu lực. Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
@@ -93,12 +93,11 @@ Chỉ định giá khi AI xác định được model với `identification_conf
 
 | API | Ai dùng | Việc |
 |---|---|---|
-| `GET /api/listings` | mọi người | Tin đã duyệt còn bán (+ tin của mình; admin thấy hết) |
+| `GET /api/listings` | mọi người | Tin còn bán (+ tin của mình; admin thấy hết để kiểm tra) |
 | `POST /api/listings` | đăng nhập | Đăng tin (`image` là data URL, được tải lên Blob) |
-| `PATCH /api/listings/:id` | admin | Duyệt / từ chối |
 | `DELETE /api/listings/:id` | chủ tin, admin | Gỡ tin |
 | `POST /api/orders` | đăng nhập | `{ items: [{ listingId, variant }], phone, address, note }`; 409 kèm `unavailable` nếu có món không còn |
-| `GET /api/orders` | đăng nhập | `{ purchases, sales }` (admin thêm `?scope=all`) |
+| `GET /api/orders` | đăng nhập | `{ purchases, sales }` |
 | `PATCH /api/orders/:id` | người trong đơn, admin | `{ action: "confirm" \| "complete" \| "cancel" }` |
 | `POST /api/listings/:id/offers` | đăng nhập | `{ offeredItem, message }` |
 | `GET /api/offers` | đăng nhập | `{ received, sent }` |

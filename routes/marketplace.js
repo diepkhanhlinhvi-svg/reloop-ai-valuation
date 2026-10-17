@@ -4,7 +4,7 @@ import { requireAdmin, requireLogin } from "../auth.js";
 import { asyncRoute } from "../lib/http-error.js";
 import { createLimiter } from "../lib/rate-limit-store.js";
 import {
-  listListings, createListing, moderateListing, deleteListing,
+  listListings, createListing, deleteListing,
   placeOrder, listOrders, updateOrder,
   createOffer, listOffers, updateOffer,
   marketplaceSummary
@@ -27,10 +27,6 @@ router.post("/listings", requireLogin, writeLimiter, asyncRoute(async (req, res)
   res.status(201).json({ listing: await createListing(req.user, req.body) });
 }));
 
-router.patch("/listings/:id", requireAdmin, asyncRoute(async (req, res) => {
-  res.json({ listing: await moderateListing(req.user, req.params.id, req.body?.status) });
-}));
-
 router.delete("/listings/:id", requireLogin, asyncRoute(async (req, res) => {
   await deleteListing(req.user, req.params.id);
   res.json({ ok: true });
@@ -38,7 +34,7 @@ router.delete("/listings/:id", requireLogin, asyncRoute(async (req, res) => {
 
 // --- ĐƠN HÀNG ---
 router.get("/orders", requireLogin, asyncRoute(async (req, res) => {
-  res.json(await listOrders(req.user, { all: req.query.scope === "all" }));
+  res.json(await listOrders(req.user));
 }));
 
 router.post("/orders", requireLogin, writeLimiter, asyncRoute(async (req, res) => {

@@ -2,7 +2,7 @@ import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { useTestDatabase, useFakeBlob, admin, alice, bob, carol, TINY_JPEG } from "./helpers.js";
 import {
-  listListings, createListing, moderateListing, deleteListing,
+  listListings, createListing, deleteListing,
   placeOrder, listOrders, updateOrder,
   createOffer, listOffers, updateOffer, marketplaceSummary
 } from "../lib/marketplace.js";
@@ -17,9 +17,8 @@ beforeEach(async () => {
 
 const contact = { phone: "0901 234 567", address: "12 Nguyễn Huệ, Quận 1" };
 
-async function approvedListing(owner = alice, overrides = {}) {
-  const listing = await createListing(owner, { name: "Tai nghe Sony", price: 1_500_000, type: "both", ...overrides });
-  return owner.role === "admin" ? listing : moderateListing(admin, listing.id, "approved");
+function approvedListing(owner = alice, overrides = {}) {
+  return createListing(owner, { name: "Tai nghe Sony", price: 1_500_000, type: "both", ...overrides });
 }
 
 async function rejects(promise, status) {
@@ -29,15 +28,50 @@ async function rejects(promise, status) {
   });
 }
 
-test("tin của user chờ duyệt, ảnh được tải lên Blob và chỉ lưu URL", async () => {
+test("tin hiện ngay trên chợ, ảnh được tải lên Blob và chỉ lưu URL", async () => {
   const listing = await createListing(alice, { name: "Nồi chiên", price: 900_000, image: TINY_JPEG });
-  assert.equal(listing.status, "pending");
+  assert.equal(listing.status, "approved");
   assert.equal(listing.availability, "available");
   assert.equal(listing.image, blob.uploaded[0]);
 
-  assert.equal((await listListings(null)).length, 0, "khách không thấy tin chờ duyệt");
-  assert.equal((await listListings(alice)).length, 1, "chủ tin thấy tin của mình");
+  assert.equal((await listListings(null)).length, 1, "khách thấy tin ngay, không cần chờ duyệt");
+  assert.equal((await listListings(alice)).length, 1);
   assert.equal((await listListings(admin)).length, 1);
+});
+
+test("bấm đăng nhiều lần (kể cả song song) chỉ ra một tin và một ảnh", async () => {
+  const body = { name: "Nồi chiên", price: 900_000, image: TINY_JPEG };
+  const results = await Promise.all([createListing(alice, body), createListing(alice, body), createListing(alice, body)]);
+  assert.equal(new Set(results.map((l) => l.id)).size, 1);
+  assert.equal((await listListings(admin)).length, 1);
+  assert.equal(blob.uploaded.length, 1, "tin trùng không tải thêm ảnh");
+
+  await createListing(alice, { ...body, name: "Nồi chiên khác" });
+  await createListing(bob, body);
+  assert.equal((await listListings(admin)).length, 3, "tin khác hoặc người khác đăng vẫn tạo bình thường");
+});
+
+test("admin chỉ kiểm tra và gỡ tin, không đăng, mua hay trao đổi", async () => {
+  const listing = await approvedListing(alice);
+  await rejects(createListing(admin, { name: "X", price: 1000 }), 403);
+  await rejects(placeOrder(admin, { items: [{ listingId: listing.id }], ...contact }), 403);
+  await rejects(createOffer(admin, listing.id, { offeredItem: "Gì đó" }), 403);
+  await rejects(updateOrder(admin, 1, "cancel"), 403);
+  await rejects(updateOffer(admin, 1, "reject"), 403);
+
+  assert.equal((await listListings(admin)).length, 1, "admin thấy mọi tin để kiểm tra");
+  await deleteListing(admin, listing.id);
+  assert.equal((await listListings(admin)).length, 0);
+});
+
+test("admin gỡ tin đang có đơn thì đơn bị hủy theo", async () => {
+  const listing = await approvedListing(alice);
+  const [order] = await placeOrder(bob, { items: [{ listingId: listing.id }], ...contact });
+  await deleteListing(admin, listing.id);
+  const [bobOrder] = (await listOrders(bob)).purchases;
+  assert.equal(bobOrder.id, order.id);
+  assert.equal(bobOrder.status, "cancelled");
+  assert.equal(bobOrder.cancelledBy, admin.username);
 });
 
 test("ảnh không hợp lệ bị từ chối trước khi ghi gì", async () => {
@@ -116,7 +150,7 @@ test("hủy đơn trả món đồ về chợ và cho phép người khác mua",
   assert.equal(again.buyer, carol.username);
 });
 
-test("người mua và người bán thấy đơn của mình, admin xem được tất cả", async () => {
+test("người mua và người bán chỉ thấy đơn của mình", async () => {
   const listing = await approvedListing();
   await placeOrder(bob, { items: [{ listingId: listing.id }], ...contact });
 
@@ -124,8 +158,8 @@ test("người mua và người bán thấy đơn của mình, admin xem đượ
   assert.equal((await listOrders(alice)).sales.length, 1);
   const outsider = await listOrders(carol);
   assert.equal(outsider.purchases.length + outsider.sales.length, 0);
-  assert.equal((await listOrders(admin, { all: true })).all.length, 1);
-  assert.equal((await listOrders(bob, { all: true })).all, undefined, "user thường không lấy được mọi đơn");
+  const adminView = await listOrders(admin);
+  assert.equal(adminView.purchases.length + adminView.sales.length, 0, "admin không xem đơn của người dùng");
 });
 
 test("không gỡ được tin đang có đơn; gỡ tin xong thì xóa ảnh trên Blob", async () => {
@@ -140,10 +174,10 @@ test("không gỡ được tin đang có đơn; gỡ tin xong thì xóa ảnh tr
   assert.equal((await listOrders(bob)).purchases[0].listingId, null, "đơn cũ vẫn còn, chỉ mất liên kết");
 });
 
-test("duyệt tin đã bị gỡ trả 404 thay vì làm tin sống lại", async () => {
+test("gỡ tin đã bị gỡ trả 404", async () => {
   const listing = await createListing(alice, { name: "Sách", price: 50_000 });
   await deleteListing(alice, listing.id);
-  await rejects(moderateListing(admin, listing.id, "approved"), 404);
+  await rejects(deleteListing(admin, listing.id), 404);
   assert.equal((await listListings(admin)).length, 0);
 });
 
@@ -176,11 +210,11 @@ test("không chấp nhận đổi khi món đồ đang có đơn mua", async () 
 
 test("thống kê admin đếm tin, đơn và đề nghị", async () => {
   const listing = await approvedListing();
-  await createListing(bob, { name: "Chờ duyệt", price: 10_000 });
+  await createListing(bob, { name: "Tin khác", price: 10_000 });
   await placeOrder(carol, { items: [{ listingId: listing.id }], ...contact });
   const summary = await marketplaceSummary();
   assert.equal(summary.listings.total, 2);
-  assert.equal(summary.listings.pending, 1);
+  assert.equal(summary.listings.available, 1);
   assert.equal(summary.listings.reserved, 1);
   assert.equal(summary.orders.pending, 1);
 });
