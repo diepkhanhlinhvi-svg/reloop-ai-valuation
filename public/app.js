@@ -135,6 +135,9 @@ function renderUserBar() {
         el.innerHTML = `
             <a href="#" onclick="promptLogin(); return false;" class="hover:text-green-200 flex items-center gap-1.5 font-medium">
                 <i class="far fa-user-circle text-sm"></i> <span>Đăng nhập</span>
+            </a>
+            <a href="#" onclick="promptRegister(); return false;" class="bg-yellow-400 hover:bg-yellow-300 text-brand-900 px-2.5 py-1 rounded font-bold flex items-center gap-1.5">
+                <i class="fas fa-user-plus text-sm"></i> <span>Đăng ký</span>
             </a>`;
         return;
     }
@@ -401,6 +404,10 @@ function renderPage() {
         container.innerHTML = renderLogin();
         return;
     }
+    if (state.currentPage === 'register') {
+        container.innerHTML = renderRegister(); // public/register.js
+        return;
+    }
     if (state.currentPage === 'orders') {
         container.innerHTML = renderOrders();
         if (state.user && !state.activity.orders && !state.activity.loading && !state.activity.error) loadActivity();
@@ -554,7 +561,10 @@ function renderSellerChannel() {
                     <div class="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-store"></i></div>
                     <h2 class="text-base font-bold text-gray-800 mb-1">Đăng nhập để đăng bán</h2>
                     <p class="text-xs text-gray-500 mb-5">Bạn cần đăng nhập để đăng sản phẩm lên chợ và quản lý tin của mình.</p>
-                    <button onclick="promptLogin('seller')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng nhập</button>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="promptLogin('seller')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng nhập</button>
+                        <button onclick="promptRegister('seller')" class="border-2 border-brand-700 text-brand-800 hover:bg-brand-50 px-6 py-2 rounded-lg text-sm font-bold transition">Đăng ký</button>
+                    </div>
                 </div>
             `;
     }
@@ -1554,7 +1564,10 @@ function renderCheckout() {
                     <div class="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-lock"></i></div>
                     <h2 class="text-base font-bold text-gray-800 mb-1">Đăng nhập để đặt hàng</h2>
                     <p class="text-xs text-gray-500 mb-5">Đơn hàng được gắn với tài khoản để người bán xác nhận và bạn theo dõi giao hàng.</p>
-                    <button onclick="promptLogin('checkout')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng nhập</button>
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <button onclick="promptLogin('checkout')" class="bg-brand-700 hover:bg-brand-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng nhập</button>
+                        <button onclick="promptRegister('checkout')" class="border-2 border-brand-700 text-brand-800 hover:bg-brand-50 px-6 py-2 rounded-lg text-sm font-bold transition">Đăng ký</button>
+                    </div>
                 </div>
             `;
     }
@@ -1916,6 +1929,10 @@ function renderLogin() {
                             Đăng nhập
                         </button>
                     </form>
+                    <div class="mt-5 pt-4 border-t text-center text-xs text-gray-500">
+                        Chưa có tài khoản?
+                        <a href="#" onclick="promptRegister(state.afterLogin); return false;" class="text-brand-700 font-bold hover:underline">Đăng ký tài khoản mới</a>
+                    </div>
                 </div>
             `;
 }
