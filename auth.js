@@ -1,9 +1,9 @@
 // Đăng nhập bằng 2 loại tài khoản:
 //  1. Tài khoản khai báo sẵn trong biến môi trường AUTH_USERS (admin, tài khoản demo).
-//  2. Tài khoản người dùng tự đăng ký, lưu trong database (lib/accounts.js).
+//  2. Tài khoản người dùng tự đăng ký, lưu trong database (lib/accounts.js, routes/signup.js).
 // Phiên đăng nhập là cookie HttpOnly ký HMAC bằng AUTH_SECRET.
 import crypto from "node:crypto";
-import { findAccount, verifyAccount } from "./lib/accounts.js";
+import { findAccount } from "./lib/accounts.js";
 
 const COOKIE_NAME = "reloop_session";
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -61,19 +61,15 @@ export function listUsers() {
   return [...users.values()];
 }
 
-// Chỉ tìm trong AUTH_USERS (dùng cho đăng nhập nhanh demo và chặn đăng ký trùng tên tài khoản hệ thống).
-// Cố ý KHÔNG tìm tài khoản tự đăng ký: đăng nhập nhanh không được vào tài khoản của người thật.
 export function findUserByUsername(username) {
   return users.get(String(username || "").trim().toLowerCase()) || null;
 }
 
-export async function findUserByCredentials(username, password) {
+export function findUserByCredentials(username, password) {
   const user = users.get(String(username || "").trim().toLowerCase());
-  if (user) {
-    return safeEqual(password || "", user.password) ? user : null;
-  }
-  // Không có trong AUTH_USERS -> tìm tài khoản tự đăng ký trong database
-  return verifyAccount(username, password);
+  // Vẫn so sánh khi không có user để thời gian phản hồi không tiết lộ tên đăng nhập có tồn tại hay không
+  const ok = safeEqual(password || "", user ? user.password : crypto.randomBytes(16).toString("hex"));
+  return user && ok ? user : null;
 }
 
 // Dấu vân tay mật khẩu hiện tại: đổi mật khẩu trong AUTH_USERS thì mọi phiên cũ của tài khoản đó hết hiệu lực
