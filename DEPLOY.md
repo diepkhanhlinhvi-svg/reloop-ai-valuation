@@ -205,6 +205,9 @@ Sửa xong nhớ chạy lại `npx vercel --prod`.
 7. Đăng nhập `user1` → **Đơn hàng** (góc trên phải) → tab **Đơn bán** → **Xác nhận giao**.
 8. Đăng nhập `user2` → **Đơn hàng** → **Đã nhận hàng**. Tin của user1 chuyển sang "Đã bán", doanh thu ở Kênh Người Bán tăng.
 9. Vào **Định giá AI**, tải 1 ảnh thử → phải ra kết quả (chờ khoảng 10–30 giây).
+10. **Đăng ký tài khoản mới:** đăng xuất → bấm nút **Đăng ký** màu vàng (góc trên phải) → điền họ tên, tên đăng nhập
+    (vd `thuthu01`), mật khẩu 2 lần → tick ô đồng ý → **Tạo tài khoản**. Tài khoản mới phải được đăng nhập ngay.
+11. Đăng xuất → **Đăng nhập** bằng `thuthu01` và mật khẩu vừa tạo → vào được. Mở 1 sản phẩm → **Mua Ngay** → đặt hàng được.
 
 ---
 
@@ -247,6 +250,8 @@ Project → tab **Logs** (lỗi khi đang chạy) hoặc tab **Deployments** →
 | `npx` / `node` báo "not recognized" | Chưa cài Node.js | Cài Node LTS từ https://nodejs.org, **tắt và mở lại** VS Code |
 | Deploy báo `Error: No Output Directory` hoặc trang trắng | Vercel nhận nhầm loại dự án | **Settings → Build and Deployment → Framework Preset** chọn **Express** → Save → `npx vercel --prod` |
 | Đăng nhập báo "Tên đăng nhập hoặc mật khẩu không đúng" dù gõ đúng | `AUTH_USERS` dán thiếu ký tự / có dấu ngoặc kép thừa ở đầu cuối | Edit lại biến, giá trị phải bắt đầu bằng `[` và kết thúc bằng `]` → deploy lại |
+| Không thấy nút **Đăng ký** màu vàng | Web đang chạy code cũ (chép file zip vào thư mục nhưng chưa giải nén, hoặc chưa deploy lại) | Kiểm tra có file `public/register.js` và `lib/accounts.js` → `npx vercel --prod` → Ctrl+F5 |
+| Đăng ký báo "Máy chủ chưa kết nối database" | Tài khoản đăng ký lưu trong Neon nhưng chưa có `DATABASE_URL` | Làm Phần 4.1 → deploy lại |
 | Đăng nhập xong một lúc lại bị đăng xuất | Thiếu `AUTH_SECRET` | Thêm `AUTH_SECRET` → deploy lại |
 | "Máy chủ chưa kết nối database" | Thiếu `DATABASE_URL` | Làm Phần 4.1 → deploy lại |
 | "Máy chủ chưa cấu hình nơi lưu ảnh" khi đăng tin | Thiếu `BLOB_READ_WRITE_TOKEN` | Làm Phần 4.2 → deploy lại |

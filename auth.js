@@ -1,6 +1,9 @@
-// Đăng nhập bằng các tài khoản khai báo sẵn trong biến môi trường AUTH_USERS (không có đăng ký).
-// Phiên đăng nhập là cookie HttpOnly ký HMAC bằng AUTH_SECRET, nên chạy được trên Vercel mà không cần database.
+// Đăng nhập bằng 2 loại tài khoản:
+//  1. Tài khoản khai báo sẵn trong biến môi trường AUTH_USERS (admin, tài khoản demo).
+//  2. Tài khoản người dùng tự đăng ký, lưu trong database (lib/accounts.js).
+// Phiên đăng nhập là cookie HttpOnly ký HMAC bằng AUTH_SECRET.
 import crypto from "node:crypto";
+import { findAccount, verifyAccount } from "./lib/accounts.js";
 
 const COOKIE_NAME = "reloop_session";
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -29,7 +32,7 @@ function loadUsers() {
 
 const users = loadUsers();
 if (!users.size) {
-  console.warn("WARNING: AUTH_USERS chưa khai báo tài khoản nào. Chức năng đăng nhập sẽ không dùng được");
+  console.warn("WARNING: AUTH_USERS chưa khai báo tài khoản nào. Chỉ đăng nhập được bằng tài khoản tự đăng ký");
 }
 
 let secret = process.env.AUTH_SECRET;
@@ -58,15 +61,19 @@ export function listUsers() {
   return [...users.values()];
 }
 
+// Chỉ tìm trong AUTH_USERS (dùng cho đăng nhập nhanh demo và chặn đăng ký trùng tên tài khoản hệ thống).
+// Cố ý KHÔNG tìm tài khoản tự đăng ký: đăng nhập nhanh không được vào tài khoản của người thật.
 export function findUserByUsername(username) {
   return users.get(String(username || "").trim().toLowerCase()) || null;
 }
 
-export function findUserByCredentials(username, password) {
+export async function findUserByCredentials(username, password) {
   const user = users.get(String(username || "").trim().toLowerCase());
-  // Vẫn so sánh khi không có user để thời gian phản hồi không tiết lộ tên đăng nhập có tồn tại hay không
-  const ok = safeEqual(password || "", user ? user.password : crypto.randomBytes(16).toString("hex"));
-  return user && ok ? user : null;
+  if (user) {
+    return safeEqual(password || "", user.password) ? user : null;
+  }
+  // Không có trong AUTH_USERS -> tìm tài khoản tự đăng ký trong database
+  return verifyAccount(username, password);
 }
 
 // Dấu vân tay mật khẩu hiện tại: đổi mật khẩu trong AUTH_USERS thì mọi phiên cũ của tài khoản đó hết hiệu lực
@@ -105,17 +112,20 @@ function readCookie(req, name) {
 }
 
 // Gắn req.user nếu cookie phiên hợp lệ
-export function attachUser(req, _res, next) {
+export async function attachUser(req, _res, next) {
   req.user = null;
   const token = readCookie(req, COOKIE_NAME);
   const [payload, signature] = String(token || "").split(".");
   if (payload && signature && safeEqual(signature, sign(payload))) {
     try {
       const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-      const user = users.get(data.u);
-      if (user && Number(data.exp) > Date.now() && data.v === passwordVersion(user)) req.user = user;
+      if (Number(data.exp) > Date.now()) {
+        // Tài khoản AUTH_USERS trước, không có thì tìm tài khoản tự đăng ký trong database
+        const user = users.get(data.u) || await findAccount(data.u);
+        if (user && data.v === passwordVersion(user)) req.user = user;
+      }
     } catch {
-      // cookie hỏng -> coi như chưa đăng nhập
+      // cookie hỏng hoặc database tạm lỗi -> coi như chưa đăng nhập
     }
   }
   next();

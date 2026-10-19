@@ -54,12 +54,21 @@ Giới hạn cần biết trên Vercel:
 - Không đặt `FRONTEND_ORIGIN` khi frontend và API cùng domain trên Vercel.
 
 ## Tài khoản
-Không có đăng ký: tài khoản khai báo sẵn trong biến `AUTH_USERS` (JSON), mỗi tài khoản gồm `username`, `password`, `role` (`admin` | `user`), `name`.
+Có 2 loại tài khoản:
+1. **Tự đăng ký** (nút **Đăng ký** màu vàng trên thanh trên cùng → trang Đăng ký riêng, code giao diện ở `public/register.js`): người mới tạo tài khoản bằng họ tên, tên đăng nhập, mật khẩu, tạo xong là đăng nhập luôn để mua hàng, đăng tin, trao đổi.
+   - Lưu trong bảng `accounts` của Neon Postgres (`lib/accounts.js`), bảng tự tạo ở lần dùng đầu tiên. Mật khẩu chỉ lưu dạng băm scrypt.
+   - Luôn có vai trò `user`; không ai tự đăng ký thành admin được. Đăng nhập nhanh (`DEMO_LOGIN`) không vào được tài khoản tự đăng ký.
+   - Tên đăng nhập 3–30 ký tự (chữ không dấu, số, `.`, `_`), không trùng tài khoản trong `AUTH_USERS` và một số tên dành riêng (admin, root, quantri...). Mật khẩu tối thiểu 6 ký tự.
+   - Giới hạn 20 lần đăng ký / giờ / IP để chặn tạo tài khoản hàng loạt.
+2. **Khai báo sẵn** trong biến `AUTH_USERS` (JSON), mỗi tài khoản gồm `username`, `password`, `role` (`admin` | `user`), `name`. Dùng cho admin và tài khoản demo.
+
+Quyền:
 - **user**: đăng tin bán/trao đổi (hiện ngay trên chợ), mua hàng, gỡ tin của mình; không tự mua được tin của chính mình.
 - **admin**: chỉ kiểm tra và gỡ tin vi phạm trên trang **Quản trị**, xem thống kê. Không đăng, mua, trao đổi hay xử lý đơn.
 - Định giá AI và xem chợ không cần đăng nhập; đặt hàng và gửi đề nghị đổi cần đăng nhập.
-- `DEMO_LOGIN=true` hiện nút đăng nhập nhanh từng tài khoản (không cần mật khẩu) ở trang đăng nhập. Dự án này bật cả trên Vercel để công khai 3 tài khoản (ai cũng vào được admin, chấp nhận vì là dự án cá nhân).
-- Thêm/đổi mật khẩu: sửa `AUTH_USERS` rồi khởi động lại server (trên Vercel: Redeploy). Phiên đăng nhập cũ của tài khoản bị đổi mật khẩu tự hết hiệu lực. Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
+- `DEMO_LOGIN=true` hiện nút đăng nhập nhanh các tài khoản trong `AUTH_USERS` (không cần mật khẩu) ở trang đăng nhập.
+- Thêm/đổi mật khẩu tài khoản `AUTH_USERS`: sửa biến rồi khởi động lại server (trên Vercel: Redeploy). Phiên đăng nhập cũ của tài khoản bị đổi mật khẩu tự hết hiệu lực. Đổi `AUTH_SECRET` sẽ đăng xuất mọi người.
+- **Bắt buộc đặt `AUTH_SECRET`** trên Vercel: thiếu biến này thì mọi người bị đăng xuất mỗi khi server khởi động lại.
 
 ## Database
 - **Neon Postgres** (Vercel → Storage → Neon, gói Free) lưu tin đăng, đơn hàng, đề nghị trao đổi, thống kê và bộ đếm rate limit. Biến `DATABASE_URL`.
@@ -93,6 +102,8 @@ Chỉ định giá khi AI xác định được model với `identification_conf
 
 | API | Ai dùng | Việc |
 |---|---|---|
+| `POST /api/auth/register` | mọi người | `{ name, username, password }` → tạo tài khoản và đăng nhập luôn; 409 nếu trùng tên |
+| `POST /api/auth/login` | mọi người | `{ username, password }` |
 | `GET /api/listings` | mọi người | Tin còn bán (+ tin của mình; admin thấy hết để kiểm tra) |
 | `POST /api/listings` | đăng nhập | Đăng tin (`image` là data URL, được tải lên Blob) |
 | `DELETE /api/listings/:id` | chủ tin, admin | Gỡ tin |
