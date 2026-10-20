@@ -11,7 +11,6 @@ import { blobConfigured } from "./lib/images.js";
 import { createLimiter } from "./lib/rate-limit-store.js";
 import { trackStat } from "./lib/stats.js";
 import { valuate } from "./lib/valuation.js";
-import authRoutes from "./routes/auth.js";
 import signupRoutes from "./routes/signup.js";
 import marketplaceRoutes from "./routes/marketplace.js";
 
@@ -85,11 +84,8 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
 app.use("/api/auth", signupRoutes);
-app.use("/api/auth", signupRoutes); // phải đứng trước authRoutes
 app.use("/api/auth", authRoutes);
-app.use("/api", marketplaceRoutes);
 app.use("/api", marketplaceRoutes);
 
 const valuationLimiter = createLimiter("valuate", {
