@@ -10,6 +10,7 @@ import {
   marketplaceSummary
 } from "../lib/marketplace.js";
 import { getStats } from "../lib/stats.js";
+import { getDatabaseImage } from "../lib/images.js"; // [SỬA LỖI] ảnh lưu trong database
 
 const router = Router();
 
@@ -30,6 +31,15 @@ router.post("/listings", requireLogin, writeLimiter, asyncRoute(async (req, res)
 router.delete("/listings/:id", requireLogin, asyncRoute(async (req, res) => {
   await deleteListing(req.user, req.params.id);
   res.json({ ok: true });
+}));
+
+// [SỬA LỖI] --- ẢNH TIN ĐĂNG LƯU TRONG DATABASE (khi chưa có Vercel Blob) ---
+router.get("/images/:file", asyncRoute(async (req, res) => {
+  const image = await getDatabaseImage(req.params.file);
+  if (!image) return res.status(404).json({ error: "Không tìm thấy ảnh." });
+  res.set("Content-Type", image.contentType);
+  res.set("Cache-Control", "public, max-age=31536000, immutable"); // ảnh không bao giờ đổi -> trình duyệt/CDN lưu lâu
+  res.send(image.data);
 }));
 
 // --- ĐƠN HÀNG ---
