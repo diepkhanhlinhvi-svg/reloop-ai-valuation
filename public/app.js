@@ -133,23 +133,23 @@ function renderUserBar() {
     if (!el) return;
     if (!state.user) {
         el.innerHTML = `
-            <a href="#" onclick="promptLogin(); return false;" class="hover:text-green-200 flex items-center gap-1.5 font-medium">
+            <a href="#" onclick="promptLogin(); return false;" class="hover:text-brand-700 flex items-center gap-1.5 font-medium">
                 <i class="far fa-user-circle text-sm"></i> <span>Đăng nhập</span>
             </a>
-            <a href="#" onclick="promptRegister(); return false;" class="bg-yellow-400 hover:bg-yellow-300 text-brand-900 px-2.5 py-1 rounded font-bold flex items-center gap-1.5">
+            <a href="#" onclick="promptRegister(); return false;" class="bg-brand-600 hover:bg-brand-700 text-white px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1.5">
                 <i class="fas fa-user-plus text-sm"></i> <span>Đăng ký</span>
             </a>`;
         return;
     }
     el.innerHTML = `
-        <a href="#" onclick="navigateTo('orders'); return false;" class="hover:text-green-200 flex items-center gap-1" title="Đơn hàng & trao đổi">
+        <a href="#" onclick="navigateTo('orders'); return false;" class="hover:text-brand-700 flex items-center gap-1" title="Đơn hàng & trao đổi">
             <i class="fas fa-receipt"></i> <span class="hidden md:inline">Đơn hàng</span>
         </a>
         ${state.user.role === 'admin' ? `
-            <a href="#" onclick="navigateTo('admin'); return false;" class="hover:text-yellow-200 text-yellow-300 font-semibold flex items-center gap-1" title="Quản trị">
+            <a href="#" onclick="navigateTo('admin'); return false;" class="hover:text-brand-700 text-brand-700 font-semibold flex items-center gap-1" title="Quản trị">
                 <i class="fas fa-user-shield"></i> <span class="hidden md:inline">Quản trị</span>
             </a>` : ''}
-        <a href="#" onclick="navigateTo('profile'); return false;" class="hover:text-green-200 flex items-center gap-1.5">
+        <a href="#" onclick="navigateTo('profile'); return false;" class="hover:text-brand-700 flex items-center gap-1.5">
             <i class="far fa-user-circle text-sm"></i>
             <span class="font-medium hidden sm:inline">${escapeHtml(state.user.name)}</span>
         </a>`;
@@ -259,16 +259,16 @@ const categories = [
 
 // --- CORE NAVIGATION & HELPER FUNCTIONS ---
 // Màu chữ riêng của từng kênh khi không được chọn (giữ đúng thiết kế ban đầu)
-const CHANNEL_IDLE_TEXT = { buyer: 'text-green-100', seller: 'text-green-100', trade: 'text-yellow-300' };
+const CHANNEL_IDLE_TEXT = { buyer: 'text-slate-600', seller: 'text-slate-600', trade: 'text-slate-600' };
 
 function updateChannelButtons() {
     ['buyer', 'seller', 'trade'].forEach(ch => {
         const btn = document.getElementById(`nav-btn-${ch}`);
         if (!btn) return;
-        const base = 'px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 flex-shrink-0';
+        const base = 'px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 flex-shrink-0';
         btn.className = ch === state.channel
-            ? `${base} bg-brand-700 text-white shadow`
-            : `${base} hover:bg-brand-800 ${CHANNEL_IDLE_TEXT[ch]}`;
+            ? `${base} bg-brand-50 text-brand-800`
+            : `${base} hover:bg-brand-50 hover:text-brand-700 ${CHANNEL_IDLE_TEXT[ch]}`;
     });
 }
 
@@ -667,22 +667,23 @@ function renderSellerChannel() {
     const waiting = sales.filter(o => o.status === 'pending').length
         + (state.activity.offers?.received || []).filter(o => o.status === 'pending').length;
     return `
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
                     <!-- Form Upload Sản Phẩm Mới -->
-                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-5 md:p-6 space-y-5 border border-brand-100">
-                        <div class="border-b pb-3 flex flex-wrap justify-between items-center gap-3">
+                    <div class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7 lg:col-span-2">
+                        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                             <div>
-                                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-brand-700">Kênh người bán</p>
+                                <h2 class="mt-1 flex items-center gap-2 text-xl font-bold text-gray-900">
                                     <i class="fas fa-cloud-upload-alt text-brand-700"></i> Đăng Sản Phẩm Mới Lên Chợ
                                 </h2>
-                                <p class="text-xs text-gray-500 mt-1">Đăng bán hoặc treo món đồ cũ để giao lưu đổi lấy vật phẩm khác.</p>
+                                <p class="mt-1 text-sm text-slate-500">Chia sẻ món đồ còn giá trị với cộng đồng ReLoop.</p>
                             </div>
-                            <button onclick="navigateTo('ai-valuation')" class="text-xs bg-yellow-100 text-yellow-800 font-bold px-3 py-1.5 rounded-lg hover:bg-yellow-200">
+                            <button onclick="navigateTo('ai-valuation')" class="rounded-xl bg-brand-50 px-3 py-2 text-xs font-bold text-brand-800 transition hover:bg-brand-100">
                                 <i class="fas fa-magic"></i> Dùng AI Định Giá
                             </button>
                         </div>
 
-                        <form onsubmit="handleUploadProduct(event)" class="space-y-4 text-xs">
+                        <form onsubmit="handleUploadProduct(event)" class="space-y-5 text-sm">
                             <div>
                                 <label class="font-bold text-gray-700 block mb-1">Tên Sản Phẩm / Món Đồ Cũ *</label>
                                 <input type="text" id="up-name" required placeholder="VD: Tai nghe Sony WH-1000XM4 đã sử dụng 6 tháng"
@@ -723,16 +724,16 @@ function renderSellerChannel() {
                             </div>
 
                             <!-- Món đồ muốn đổi (Hiện khi chọn trade/both) -->
-                            <div id="exchange-need-box" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                <label class="font-bold text-amber-900 block mb-1"><i class="fas fa-sync-alt"></i> Món Đồ Muốn Nhận Đổi Lại</label>
+                            <div id="exchange-need-box" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                <label class="mb-1 block font-bold text-emerald-900"><i class="fas fa-sync-alt"></i> Món Đồ Muốn Nhận Đổi Lại</label>
                                 <input type="text" id="up-desired" placeholder="VD: Muốn đổi lấy Loa Bluetooth mini hoặc Nồi chiên không dầu..."
-                                    class="w-full border rounded-lg p-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none">
-                                <p class="text-amber-800 mt-1.5">Trao đổi theo nguyên tắc ngang giá: người đề nghị phải dùng một món của họ có giá chênh lệch với giá bạn nhập không quá ${TRADE_TOLERANCE_PERCENT}%.</p>
+                                    class="w-full border rounded-xl p-3 text-sm focus:ring-1 focus:ring-brand-600 outline-none">
+                                <p class="mt-2 text-xs leading-5 text-emerald-800">Trao đổi theo nguyên tắc ngang giá: người đề nghị phải dùng một món của họ có giá chênh lệch với giá bạn nhập không quá ${TRADE_TOLERANCE_PERCENT}%.</p>
                             </div>
 
                             <div>
                                 <label class="font-bold text-gray-700 block mb-1">Hình Ảnh Sản Phẩm *</label>
-                                <label for="up-image-file" class="block border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 cursor-pointer">
+                                <label for="up-image-file" class="block cursor-pointer rounded-2xl border-2 border-dashed border-emerald-200 bg-slate-50 p-6 text-center transition hover:border-emerald-400 hover:bg-emerald-50">
                                     <img id="up-image-preview" alt="" class="hidden mx-auto mb-2 h-24 w-24 object-cover rounded-lg border">
                                     <i class="fas fa-camera text-2xl text-gray-400 mb-1"></i>
                                     <p class="text-gray-500">Tải ảnh sản phẩm từ thiết bị của bạn</p>
@@ -746,8 +747,8 @@ function renderSellerChannel() {
                                     class="w-full border rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-brand-600 outline-none"></textarea>
                             </div>
 
-                            <p class="text-gray-500 flex items-center gap-1.5"><i class="fas fa-info-circle text-brand-600"></i> Tin đăng sẽ hiển thị ngay trên chợ. Quản trị viên có thể gỡ tin nếu vi phạm.</p>
-                            <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
+                            <p class="flex items-center gap-1.5 text-xs leading-5 text-slate-500"><i class="fas fa-info-circle text-brand-600"></i> Tin đăng sẽ hiển thị ngay trên chợ. Quản trị viên có thể gỡ tin nếu vi phạm.</p>
+                            <button type="submit" class="w-full rounded-xl bg-brand-600 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
                                 <i class="fas fa-check-circle mr-1"></i> Đăng Bán Ngay
                             </button>
                         </form>
@@ -755,29 +756,30 @@ function renderSellerChannel() {
 
                     <!-- Sidebar Thống Kê & Quản Lý Đơn -->
                     <div class="space-y-4">
-                        <div class="bg-white rounded-xl shadow-sm p-5 border">
-                            <h3 class="font-bold text-sm text-gray-800 mb-3 uppercase border-b pb-2">Thống Kê Kênh Bán</h3>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <h3 class="mb-3 border-b border-slate-100 pb-3 text-sm font-bold text-gray-900">Thống kê kênh bán</h3>
+                            ${state.activity.error ? `<p role="alert" class="mb-3 rounded-lg bg-red-50 p-3 text-xs text-red-700">${escapeHtml(state.activity.error)}</p>` : ''}
                             <div class="grid grid-cols-2 gap-3 text-center">
-                                <div class="bg-green-50 p-3 rounded-lg border border-brand-100">
-                                    <div class="text-lg font-black text-brand-800">${state.activity.orders ? formatMoney(revenue) : '…'}</div>
-                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Doanh Thu</div>
+                                <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3">
+                                    <div class="text-lg font-black text-brand-800">${state.activity.orders ? formatMoney(revenue) : '—'}</div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-500">Hoàn tất</div>
                                 </div>
-                                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                    <div class="text-lg font-black text-blue-800">${mine.filter(p => p.availability === 'available').length}</div>
-                                    <div class="text-[10px] text-gray-500 uppercase font-bold">Sản Phẩm Đang Đăng</div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                                    <div class="text-lg font-black text-slate-800">${mine.filter(p => p.availability === 'available').length}</div>
+                                    <div class="text-[10px] font-bold uppercase text-slate-500">Đang hiển thị</div>
                                 </div>
                             </div>
-                            <button onclick="openActivity('sales')" class="mt-3 w-full text-xs border border-brand-200 text-brand-800 font-bold py-2 rounded-lg hover:bg-brand-50 transition">
+                            <button onclick="openActivity('sales')" class="mt-3 w-full rounded-xl border border-brand-200 py-2.5 text-xs font-bold text-brand-800 transition hover:bg-brand-50">
                                 <i class="fas fa-receipt mr-1"></i> Đơn bán & đề nghị đổi${waiting ? ` <span class="bg-red-500 text-white rounded-full px-1.5 ml-1">${waiting}</span>` : ''}
                             </button>
                         </div>
 
-                        <div class="bg-white rounded-xl shadow-sm p-5 border">
-                            <h3 class="font-bold text-sm text-gray-800 mb-3 uppercase border-b pb-2">Sản Phẩm Của Tôi</h3>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <h3 class="mb-3 border-b border-slate-100 pb-3 text-sm font-bold text-gray-900">Sản phẩm của tôi <span class="font-medium text-slate-400">(${mine.length})</span></h3>
                             <div class="space-y-3 max-h-96 overflow-y-auto">
-                                ${mine.length === 0 ? `<p class="text-xs text-gray-400 text-center py-3">Bạn chưa đăng sản phẩm nào.</p>` : ''}
+                                ${mine.length === 0 ? `<p class="py-4 text-center text-xs text-slate-500">${state.activity.loading ? 'Đang tải tin đăng...' : 'Bạn chưa đăng sản phẩm nào.'}</p>` : ''}
                                 ${mine.map(p => `
-                                    <div class="flex items-center gap-3 text-xs border-b pb-2 cursor-pointer hover:bg-gray-50 rounded" onclick="navigateTo('detail', ${p.id})">
+                                    <div class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 p-2 text-xs transition hover:border-emerald-200 hover:bg-emerald-50/50" onclick="navigateTo('detail', ${p.id})">
                                         <img src="${escapeHtml(p.image)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0 bg-gray-100">
                                         <div class="flex-1 min-w-0">
                                             <h4 class="font-semibold text-gray-800 truncate">${escapeHtml(p.name)}</h4>
@@ -898,8 +900,8 @@ function openModal(html) {
     closeModal();
     const overlay = document.createElement('div');
     overlay.id = 'modal-root';
-    overlay.className = 'fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4';
-    overlay.innerHTML = `<div role="dialog" aria-modal="true" class="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 text-xs">${html}</div>`;
+    overlay.className = 'fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-3 backdrop-blur-sm sm:p-4';
+    overlay.innerHTML = `<div role="dialog" aria-modal="true" class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 text-xs shadow-2xl sm:p-6">${html}</div>`;
     overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) closeModal(); });
     document.body.appendChild(overlay);
 }
@@ -922,18 +924,18 @@ function renderTradingChannel() {
 
     return `
                 <div class="space-y-6">
-                    <div class="bg-gradient-to-r from-amber-600 to-yellow-600 text-white rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-white p-5 shadow-sm sm:p-8">
                         <div>
-                            <span class="bg-black/30 font-bold px-3 py-0.5 rounded-full text-xs uppercase">Sàn trao đổi đồ cũ</span>
-                            <h1 class="text-2xl font-extrabold mt-2">Đổi ngang giá, hai bên cùng đồng ý</h1>
-                            <p class="text-yellow-100 text-sm mt-1 max-w-2xl">Chọn món bạn muốn, đề nghị đổi bằng một món của bạn có giá trị chênh lệch không quá ${TRADE_TOLERANCE_PERCENT}%. Chủ món chấp nhận thì hai món cùng được đánh dấu đã đổi và hai bên nhận số điện thoại của nhau để hẹn giao nhận.</p>
+                            <span class="inline-flex rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-800">Sàn trao đổi đồ cũ</span>
+                            <h1 class="mt-3 text-2xl font-extrabold text-gray-900 sm:text-3xl">Đổi ngang giá, hai bên cùng đồng ý</h1>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Chọn món bạn muốn, đề nghị đổi bằng một món của bạn có giá trị chênh lệch không quá ${TRADE_TOLERANCE_PERCENT}%. Chủ món chấp nhận thì hai món cùng được đánh dấu đã đổi và hai bên nhận số điện thoại của nhau để hẹn giao nhận.</p>
                         </div>
-                        <div class="flex flex-wrap gap-2 flex-shrink-0">
-                            <button onclick="switchChannel('seller')" class="bg-white text-amber-900 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-yellow-50 shadow whitespace-nowrap">
+                        <div class="mt-5 flex flex-wrap gap-2">
+                            <button onclick="switchChannel('seller')" class="whitespace-nowrap rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
                                 <i class="fas fa-plus-circle mr-1"></i> Đăng đồ muốn đổi
                             </button>
-                            <button onclick="openActivity('received')" class="border border-white/70 text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-white/10 whitespace-nowrap">
-                                <i class="fas fa-inbox mr-1"></i> Đề nghị của tôi${receivedWaiting ? ` <span class="bg-red-500 text-white rounded-full px-1.5 ml-1">${receivedWaiting}</span>` : ''}
+                            <button onclick="openActivity('received')" class="whitespace-nowrap rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50">
+                                <i class="fas fa-inbox mr-1"></i> Đề nghị đã nhận${receivedWaiting ? ` <span class="ml-1 rounded-full bg-emerald-100 px-1.5 text-emerald-800">${receivedWaiting}</span>` : ''}
                             </button>
                         </div>
                     </div>
@@ -944,30 +946,30 @@ function renderTradingChannel() {
                             ['2', 'Đề nghị đổi bằng món của bạn', `Chọn một món bạn đang đăng, giá chênh nhau tối đa ${TRADE_TOLERANCE_PERCENT}%, kèm số điện thoại.`],
                             ['3', 'Hai bên đồng ý là xong', 'Cả hai món đều biến khỏi chợ, bạn nhận số điện thoại của đối phương.']
                         ].map(([n, title, text]) => `
-                            <div class="bg-white rounded-xl border border-amber-100 p-4 flex gap-3">
-                                <span class="w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-black flex items-center justify-center flex-shrink-0">${n}</span>
+                            <div class="flex gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+                                <span class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 font-black text-emerald-800">${n}</span>
                                 <div><h3 class="font-bold text-gray-800">${title}</h3><p class="text-gray-500 mt-0.5">${text}</p></div>
                             </div>`).join('')}
                     </div>
 
-                    <div class="bg-white rounded-xl p-3 shadow-sm flex flex-wrap gap-2">
+                    <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
                         ${categories.map(cat => `
-                            <button onclick="filterByCategory('${cat.id}')" class="px-3 py-1.5 rounded-full text-xs border ${state.categoryFilter === cat.id ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold' : 'border-gray-200 text-gray-600 hover:border-amber-400'}">${cat.name}</button>
+                            <button onclick="filterByCategory('${cat.id}')" class="rounded-full border px-3 py-1.5 text-xs transition ${state.categoryFilter === cat.id ? 'border-emerald-500 bg-emerald-50 font-bold text-emerald-800' : 'border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50'}">${cat.name}</button>
                         `).join('')}
                     </div>
 
                     <div>
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-base font-bold text-gray-800 border-l-4 border-amber-500 pl-3 uppercase">
+                            <h2 class="border-l-4 border-emerald-600 pl-3 text-base font-bold uppercase text-gray-900">
                                 ${state.searchQuery ? `Kết quả cho "${escapeHtml(state.searchQuery)}"` : `Đồ đang chờ trao đổi (${tradeItems.length})`}
                             </h2>
-                            ${filtering ? `<button onclick="filterByCategory('all')" class="text-xs text-amber-700 hover:underline">Xóa bộ lọc</button>` : ''}
+                            ${filtering ? `<button onclick="filterByCategory('all')" class="text-xs font-semibold text-emerald-700 hover:underline">Xóa bộ lọc</button>` : ''}
                         </div>
                         ${tradeItems.length === 0 ? `
-                            <div class="bg-white rounded-xl p-12 text-center text-gray-500 shadow-sm">
+                            <div class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-gray-500 shadow-sm sm:p-12">
                                 <i class="fas fa-exchange-alt text-5xl text-gray-300 mb-3"></i>
                                 <p class="text-base font-medium">${filtering ? 'Không có món nào phù hợp.' : 'Chưa có vật phẩm nào đang chờ trao đổi.'}</p>
-                                <button onclick="switchChannel('seller')" class="mt-4 bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-amber-600 transition">Đăng đồ muốn đổi</button>
+                                <button onclick="switchChannel('seller')" class="mt-4 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700">Đăng đồ muốn đổi</button>
                             </div>
                         ` : `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -982,17 +984,17 @@ function tradeCard(item) {
     const mine = Boolean(state.user && item.owner === state.user.username);
     const [low, high] = tradeRange(item.price);
     return `
-                                <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row gap-4">
-                                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" class="w-full sm:w-36 h-36 object-cover rounded-lg flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${item.id})">
+                                <div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md sm:flex-row">
+                                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" class="h-48 w-full flex-shrink-0 cursor-pointer rounded-xl bg-slate-100 object-cover sm:h-36 sm:w-36" onclick="navigateTo('detail', ${item.id})">
                                     <div class="flex-1 min-w-0 space-y-2 text-xs w-full">
                                         <div class="flex items-center gap-2 flex-wrap">
-                                            <span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">${item.type === 'both' ? 'BÁN HOẶC ĐỔI' : 'CHỈ TRAO ĐỔI'}</span>
+                                            <span class="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">${item.type === 'both' ? 'BÁN HOẶC ĐỔI' : 'CHỈ TRAO ĐỔI'}</span>
                                             <span class="text-gray-400"><i class="far fa-user"></i> ${escapeHtml(item.ownerName || 'Người đăng')}</span>
                                         </div>
-                                        <h3 class="font-bold text-gray-800 text-sm line-clamp-1 cursor-pointer hover:text-amber-700" onclick="navigateTo('detail', ${item.id})">${escapeHtml(item.name)}</h3>
+                                        <h3 class="font-bold text-gray-900 text-sm line-clamp-1 cursor-pointer hover:text-brand-700" onclick="navigateTo('detail', ${item.id})">${escapeHtml(item.name)}</h3>
                                         <div class="text-brand-800 font-extrabold text-base">${formatMoney(item.price)} <span class="text-[10px] font-medium text-gray-400">giá trị ước tính</span></div>
-                                        <div class="bg-gray-50 p-2 rounded border border-dashed border-amber-300 text-gray-700">
-                                            <i class="fas fa-exchange-alt text-amber-600 mr-1"></i>
+                                        <div class="rounded-xl border border-dashed border-emerald-200 bg-emerald-50/60 p-3 text-gray-700">
+                                            <i class="fas fa-exchange-alt mr-1 text-emerald-700"></i>
                                             <span class="font-bold">Muốn đổi lấy:</span> ${escapeHtml(item.desiredExchange || 'Đồ có giá trị tương đương')}
                                             <div class="text-[10px] text-gray-500 mt-0.5">Nhận món trị giá ${formatMoney(low)} – ${formatMoney(high)}</div>
                                         </div>
@@ -1000,10 +1002,10 @@ function tradeCard(item) {
                                             <span class="text-gray-400 text-[10px] truncate"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(item.location)}</span>
                                             ${mine
                                                 ? `<span class="text-gray-400 font-semibold whitespace-nowrap">Tin của bạn</span>`
-                                                : `<button onclick="openTradeOffer(${item.id})" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-1.5 rounded-lg font-bold transition whitespace-nowrap flex-shrink-0">Đề nghị đổi</button>`}
+                                                : `<button onclick="openTradeOffer(${item.id})" class="flex-shrink-0 whitespace-nowrap rounded-xl bg-brand-600 px-4 py-2 font-bold text-white transition hover:bg-brand-700">Đề nghị đổi</button>`}
                                         </div>
                                     </div>
-                                </div>`;
+                                </article>`;
 }
 
 // Mở hộp thoại chọn món của mình để đổi lấy `targetId`
@@ -1032,7 +1034,7 @@ function openTradeOffer(targetId) {
                     <div class="text-brand-800 font-bold">${formatMoney(target.price)}</div></div>
             </div>
             <button onclick="closeModal()" aria-label="Đóng" class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
-        </div>`;
+        </article>`;
 
     if (fair.length === 0) {
         openModal(`${header}
@@ -1040,7 +1042,7 @@ function openTradeOffer(targetId) {
             <p class="text-gray-500 mb-4">Món dùng để đổi phải do bạn đăng, đang để chế độ <strong>trao đổi</strong> hoặc <strong>vừa bán vừa đổi</strong>, và có giá từ <strong>${formatMoney(low)}</strong> đến <strong>${formatMoney(high)}</strong>.${mine.length ? ` Bạn đang có ${mine.length} món khác nhưng chưa nằm trong khoảng giá này.` : ''}</p>
             <div class="flex gap-2 justify-end">
                 <button onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Để sau</button>
-                <button onclick="closeModal(); switchChannel('seller')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg">Đăng món để đổi</button>
+                <button onclick="closeModal(); switchChannel('seller')" class="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white transition hover:bg-brand-700">Đăng món để đổi</button>
             </div>`);
         return;
     }
@@ -1049,8 +1051,8 @@ function openTradeOffer(targetId) {
             <fieldset class="space-y-2">
                 <legend class="font-bold text-gray-700 mb-1">Chọn món của bạn để đổi (giá ${formatMoney(low)} – ${formatMoney(high)})</legend>
                 ${fair.map((p, i) => `
-                    <label class="flex items-center gap-3 border rounded-lg p-2 cursor-pointer hover:border-amber-400 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-50">
-                        <input type="radio" name="offered" value="${p.id}" ${i === 0 ? 'checked' : ''} class="accent-amber-600">
+                    <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 p-3 transition hover:border-emerald-300 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                        <input type="radio" name="offered" value="${p.id}" ${i === 0 ? 'checked' : ''} class="accent-emerald-600">
                         <img src="${escapeHtml(p.image)}" alt="" class="w-10 h-10 rounded object-cover bg-gray-100 flex-shrink-0">
                         <span class="flex-1 min-w-0 truncate">${escapeHtml(p.name)}</span>
                         <span class="font-bold text-brand-800 whitespace-nowrap">${formatMoney(p.price)}</span>
@@ -1067,7 +1069,7 @@ function openTradeOffer(targetId) {
             </div>
             <div class="flex gap-2 justify-end">
                 <button type="button" onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Hủy</button>
-                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-60">Gửi đề nghị đổi</button>
+                <button type="submit" class="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60">Gửi đề nghị đổi</button>
             </div>
         </form>`);
 }
@@ -1113,6 +1115,10 @@ function renderDetail() {
             `;
     }
     const variants = product.variants && product.variants.length ? product.variants : ['Mặc định'];
+    const categoryName = categories.find(category => category.id === product.category)?.name;
+    const relatedProducts = products
+        .filter(item => item.id !== product.id && item.category === product.category && item.availability === 'available')
+        .slice(0, 4);
     const canBuy = !buyBlocker(product);
     const isMine = Boolean(state.user && product.owner === state.user.username);
     const canOffer = product.type !== 'buy' && product.availability === 'available' && !isMine && !isAdminUser();
@@ -1120,92 +1126,111 @@ function renderDetail() {
     const blocker = canBuy || canOffer ? null : buyBlocker(product);
 
     return `
-                <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
-                    <div class="text-xs text-gray-500 mb-6 flex items-center gap-2">
+                <div class="space-y-6">
+                    <nav aria-label="Điều hướng đường dẫn" class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <a href="#" onclick="navigateTo('home'); return false;" class="hover:text-brand-700">Trang chủ</a>
                         <i class="fas fa-chevron-right text-[8px]"></i>
-                        <span>Chi tiết sản phẩm</span>
-                        <i class="fas fa-chevron-right text-[8px]"></i>
-                        <span class="text-gray-800 font-medium line-clamp-1">${escapeHtml(product.name)}</span>
-                    </div>
+                        ${categoryName ? `<button onclick="filterByCategory('${product.category}')" class="hover:text-brand-700">${escapeHtml(categoryName)}</button><i class="fas fa-chevron-right text-[8px]"></i>` : ''}
+                        <span class="font-medium text-slate-800 line-clamp-1">${escapeHtml(product.name)}</span>
+                    </nav>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div class="space-y-4">
-                            <div class="border rounded-xl overflow-hidden bg-gray-50">
-                                <img id="main-product-img" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" class="w-full h-80 md:h-96 object-cover">
+                    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-2 lg:gap-8">
+                        <div class="space-y-3">
+                            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                                <img id="main-product-img" src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" class="h-72 w-full rounded-xl bg-slate-50 object-contain sm:h-[28rem]">
                             </div>
+                            <p class="text-center text-xs text-slate-500"><i class="fas fa-image mr-1 text-brand-600"></i> Ảnh sản phẩm do người đăng cung cấp</p>
                         </div>
 
-                        <div class="flex flex-col justify-between min-w-0">
+                        <div class="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
                             <div>
                                 ${product.availability !== 'available' ? `
-                                    <div class="mb-3 bg-yellow-50 border border-yellow-200 p-2.5 rounded-lg text-xs text-yellow-900 flex items-center gap-2">
+                                    <div class="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                                         ${statusBadge(product)}
                                         <span>Tin này không còn hiển thị trên chợ.</span>
                                     </div>
                                 ` : ''}
-                                <h1 class="text-lg md:text-xl font-bold text-gray-800 mb-3 break-words">${escapeHtml(product.name)}</h1>
+                                <div class="mb-3 flex flex-wrap gap-2">
+                                    ${categoryName ? `<span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">${escapeHtml(categoryName)}</span>` : ''}
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Đồ đã qua sử dụng</span>
+                                </div>
+                                <h1 class="mb-4 break-words text-2xl font-extrabold leading-tight text-gray-900 sm:text-3xl">${escapeHtml(product.name)}</h1>
 
-                                <div class="flex items-center gap-4 text-xs mb-4 pb-4 border-b">
-                                    <span class="bg-brand-50 text-brand-800 font-bold px-2 py-0.5 rounded">Đồ cũ · chỉ còn 1 món</span>
+                                <div class="mb-5 flex flex-wrap items-center gap-3 border-b border-slate-100 pb-5 text-xs">
+                                    <span class="rounded-full bg-brand-50 px-3 py-1 font-semibold text-brand-800">Mỗi tin một món</span>
                                     ${product.ownerName ? `
-                                        <span class="text-gray-300">|</span>
-                                        <span class="text-gray-600 truncate"><i class="far fa-user"></i> ${escapeHtml(product.ownerName)}</span>
+                                        <span class="inline-flex min-w-0 items-center gap-2 text-slate-600">
+                                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-brand-700"><i class="far fa-user"></i></span>
+                                            <span class="truncate">Người đăng: <strong>${escapeHtml(product.ownerName)}</strong></span>
+                                        </span>
                                     ` : ''}
                                     ${canManage(product) ? `
-                                        <button onclick="deleteListing(${product.id})" class="ml-auto text-red-600 hover:underline whitespace-nowrap"><i class="far fa-trash-alt"></i> Gỡ tin</button>
+                                        <button onclick="deleteListing(${product.id})" class="ml-auto whitespace-nowrap text-red-600 hover:underline"><i class="far fa-trash-alt"></i> Gỡ tin</button>
                                     ` : ''}
                                 </div>
 
-                                <div class="bg-green-50 p-4 rounded-xl mb-6 flex flex-wrap items-baseline gap-3">
-                                    <span class="text-2xl md:text-3xl font-extrabold text-brand-800">${formatMoney(product.price)}</span>
+                                <div class="mb-5 flex flex-wrap items-baseline gap-3 rounded-2xl bg-emerald-50 p-4">
+                                    <span class="text-3xl font-extrabold text-brand-800 sm:text-4xl">${formatMoney(product.price)}</span>
                                     ${hasDiscount(product) ? `
                                         <span class="text-sm text-gray-400 line-through">${formatMoney(product.originalPrice)}</span>
-                                        <span class="bg-brand-600 text-white text-xs font-bold px-2 py-0.5 rounded">GIẢM ${escapeHtml(discountLabel(product).replace('-', ''))}</span>
-                                    ` : (product.discount ? `<span class="bg-brand-600 text-white text-xs font-bold px-2 py-0.5 rounded">${escapeHtml(product.discount)}</span>` : '')}
+                                        <span class="rounded-full bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white">GIẢM ${escapeHtml(discountLabel(product).replace('-', ''))}</span>
+                                    ` : (product.discount ? `<span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">${escapeHtml(product.discount)}</span>` : '')}
                                 </div>
 
                                 ${product.desiredExchange ? `
-                                    <div class="mb-6 bg-amber-50 border border-amber-200 p-3 rounded-xl text-xs text-amber-900">
-                                        <i class="fas fa-exchange-alt text-amber-600 mr-1"></i> <strong>Nhu cầu trao đổi đồ:</strong> ${escapeHtml(product.desiredExchange)}
+                                    <div class="mb-5 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-900">
+                                        <i class="fas fa-exchange-alt mr-1 text-emerald-700"></i> <strong>Nhu cầu trao đổi đồ:</strong> ${escapeHtml(product.desiredExchange)}
                                     </div>
                                 ` : ''}
 
-                                <div class="space-y-4 mb-6">
+                                <div class="mb-5 space-y-4">
                                     ${variants.some(v => v !== 'Mặc định') ? `
-                                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                                        <span class="font-bold text-gray-600">TÌNH TRẠNG:</span>
-                                        ${variants.map(v => `<span class="px-3 py-1 rounded-lg border border-brand-700 bg-brand-50 text-brand-800 font-bold">${escapeHtml(v)}</span>`).join('')}
+                                    <div class="flex flex-wrap items-center gap-2 text-sm">
+                                        <span class="font-bold text-slate-600">Tình trạng:</span>
+                                        ${variants.map(v => `<span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-800">${escapeHtml(v)}</span>`).join('')}
                                     </div>` : ''}
-
-                                    <p class="text-xs text-gray-500"><i class="fas fa-info-circle text-brand-600"></i> Đồ cũ: mỗi tin chỉ có 1 món. Khi có người đặt, món sẽ được giữ cho người đó tới khi giao dịch xong.</p>
+                                    ${product.location ? `<p class="text-sm text-slate-500"><i class="fas fa-map-marker-alt mr-1.5 text-brand-600"></i>${escapeHtml(product.location)}</p>` : ''}
+                                    <p class="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600"><i class="fas fa-info-circle mr-1 text-brand-600"></i> Mỗi tin chỉ có một món. Khi có người đặt, món sẽ được giữ cho người đó tới khi giao dịch xong.</p>
                                 </div>
                             </div>
 
                             ${blocker ? `
-                                <div class="pt-4 border-t text-sm text-gray-600 bg-gray-50 rounded-xl p-3 flex items-center gap-2">
+                                <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 pt-4 text-sm text-gray-600">
                                     <i class="fas fa-ban text-gray-400"></i> ${escapeHtml(blocker)}
                                 </div>` : !canBuy ? '' : `
-                                <div class="flex gap-3 pt-4 border-t">
-                                    <button onclick="addToCart(${product.id})" class="flex-1 border-2 border-brand-700 text-brand-800 font-bold py-3 rounded-xl hover:bg-brand-50 transition flex items-center justify-center gap-2 text-sm">
+                                <div class="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row">
+                                    <button onclick="addToCart(${product.id})" class="flex flex-1 items-center justify-center gap-2 rounded-xl border border-brand-600 py-3 text-sm font-bold text-brand-700 transition hover:bg-brand-50">
                                         <i class="fas fa-cart-plus"></i> Thêm Vào Giỏ Hàng
                                     </button>
-                                    <button onclick="buyNow(${product.id})" class="flex-1 bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-sm">
+                                    <button onclick="buyNow(${product.id})" class="flex-1 rounded-xl bg-brand-600 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
                                         Mua Ngay
                                     </button>
                                 </div>`}
                             ${canOffer ? `
-                                <button onclick="openTradeOffer(${product.id})" class="mt-3 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition shadow text-sm">
+                                <button onclick="openTradeOffer(${product.id})" class="mt-3 w-full rounded-xl bg-emerald-50 py-3 text-sm font-bold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100">
                                     <i class="fas fa-exchange-alt mr-1"></i> Đề nghị đổi ngang giá
                                 </button>
                                 <p class="text-[11px] text-gray-500 mt-1.5 text-center">Đổi bằng món của bạn có giá ${formatMoney(tradeRange(product.price)[0])} – ${formatMoney(tradeRange(product.price)[1])}.</p>` : ''}
                         </div>
                     </div>
 
-                    <div class="mt-10 border-t pt-6">
-                        <h3 class="text-base font-bold text-gray-800 mb-3 uppercase tracking-wide">MÔ TẢ SẢN PHẨM</h3>
-                        <p class="text-sm text-gray-600 leading-relaxed max-w-4xl whitespace-pre-line break-words">${escapeHtml(product.description)}</p>
-                    </div>
+                    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                        <h2 class="text-lg font-bold text-gray-900">Mô tả sản phẩm</h2>
+                        <p class="mt-3 max-w-4xl whitespace-pre-line break-words text-sm leading-7 text-slate-600">${escapeHtml(product.description || 'Người đăng chưa bổ sung mô tả.')}</p>
+                    </section>
+                    ${relatedProducts.length ? `
+                        <section aria-labelledby="related-products-heading">
+                            <h2 id="related-products-heading" class="mb-4 text-xl font-bold text-gray-900">Sản phẩm cùng danh mục</h2>
+                            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                                ${relatedProducts.map(item => `
+                                    <button onclick="navigateTo('detail', ${item.id})" class="overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                                        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy" class="h-32 w-full bg-slate-100 object-cover sm:h-40">
+                                        <span class="block p-3"><span class="line-clamp-2 block text-sm font-semibold text-gray-800">${escapeHtml(item.name)}</span><span class="mt-2 block text-sm font-extrabold text-brand-700">${formatMoney(item.price)}</span></span>
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </section>
+                    ` : ''}
                 </div>
             `;
 }
@@ -1214,54 +1239,57 @@ function renderCart() {
     const total = state.cart.reduce((sum, item) => sum + item.price, 0);
 
     return `
-                <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
-                    <h1 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                        <i class="fas fa-shopping-cart text-brand-700"></i> Giỏ Hàng Của Bạn
-                    </h1>
+                <div class="space-y-5">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-brand-700">ReLoop Marketplace</p>
+                            <h1 class="mt-1 flex items-center gap-2 text-2xl font-extrabold text-gray-900 sm:text-3xl">
+                                Giỏ hàng <span class="text-base font-medium text-slate-500">(${state.cart.length} món)</span>
+                            </h1>
+                        </div>
+                        <button onclick="navigateTo('home')" class="text-sm font-semibold text-brand-700 hover:text-brand-800"><i class="fas fa-arrow-left mr-1"></i> Tiếp tục mua sắm</button>
+                    </div>
 
                     ${state.cart.length === 0 ? `
-                        <div class="text-center py-12">
-                            <i class="fas fa-shopping-basket text-6xl text-gray-200 mb-4"></i>
-                            <p class="text-gray-500 font-medium mb-4">Giỏ hàng của bạn đang trống.</p>
-                            <button onclick="navigateTo('home')" class="bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-brand-800 transition">
+                        <div class="rounded-2xl border border-slate-200 bg-white px-5 py-14 text-center shadow-sm">
+                            <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-3xl text-brand-600"><i class="fas fa-shopping-basket"></i></span>
+                            <p class="mt-4 font-semibold text-slate-600">Giỏ hàng của bạn đang trống.</p>
+                            <button onclick="navigateTo('home')" class="mt-5 rounded-xl bg-brand-600 px-6 py-3 text-sm font-bold text-white transition hover:bg-brand-700">
                                 Tiếp Tục Mua Sắm
                             </button>
                         </div>
                     ` : `
-                        <div class="space-y-4">
-                            <div class="hidden md:grid grid-cols-12 gap-4 pb-3 border-b text-xs font-bold text-gray-500 uppercase">
-                                <div class="col-span-8">Sản Phẩm</div>
-                                <div class="col-span-4 text-right">Giá</div>
-                            </div>
-
-                            ${state.cart.map((item, idx) => `
-                                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center border-b pb-4 text-sm">
-                                    <div class="md:col-span-8 flex gap-3 items-center min-w-0">
-                                        <img src="${escapeHtml(item.image)}" alt="" class="w-16 h-16 rounded-lg object-cover border flex-shrink-0 bg-gray-100 cursor-pointer" onclick="navigateTo('detail', ${item.id})">
-                                        <div class="min-w-0">
-                                            <h4 class="font-semibold text-gray-800 line-clamp-1">${escapeHtml(item.name)}</h4>
+                        <div class="grid items-start gap-5 lg:grid-cols-[1fr_340px]">
+                            <div class="space-y-3">
+                                ${state.cart.map((item, idx) => `
+                                    <article class="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:gap-4 sm:p-4">
+                                        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="h-20 w-20 flex-shrink-0 cursor-pointer rounded-xl border border-slate-100 bg-slate-50 object-cover sm:h-24 sm:w-24" onclick="navigateTo('detail', ${item.id})">
+                                        <div class="min-w-0 flex-1">
+                                            <h2 class="line-clamp-2 text-sm font-bold text-gray-900 sm:text-base">${escapeHtml(item.name)}</h2>
+                                            <p class="mt-1 text-xs text-slate-500">Sản phẩm đã qua sử dụng · 1 món</p>
+                                            <p class="mt-2 text-base font-extrabold text-brand-700">${formatMoney(item.price)}</p>
                                         </div>
-                                    </div>
-                                    <div class="md:col-span-4 text-right flex md:block justify-between items-center">
-                                        <span class="font-bold text-brand-800 text-base">${formatMoney(item.price)}</span>
-                                        <button onclick="removeFromCart(${idx})" aria-label="Xóa" class="text-red-500 hover:text-red-700 text-xs ml-3">
-                                            <i class="fas fa-trash"></i>
+                                        <button onclick="removeFromCart(${idx})" aria-label="Xóa ${escapeHtml(item.name)} khỏi giỏ" class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600">
+                                            <i class="far fa-trash-alt"></i>
                                         </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-
-                            <div class="mt-8 bg-gray-50 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 border">
-                                <div class="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end ml-auto">
-                                    <div>
-                                        <span class="text-xs text-gray-500">Tổng thanh toán:</span>
-                                        <div class="text-xl font-black text-brand-800">${formatMoney(total)}</div>
-                                    </div>
-                                    <button onclick="navigateTo('checkout')" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-8 py-3 rounded-xl transition text-sm shadow">
-                                        Mua Hàng
-                                    </button>
-                                </div>
+                                    </article>
+                                `).join('')}
                             </div>
+                            <aside class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-36">
+                                <h2 class="text-lg font-bold text-gray-900">Tóm tắt đơn hàng</h2>
+                                <div class="mt-4 flex justify-between gap-3 border-b border-slate-100 pb-4 text-sm">
+                                    <span class="text-slate-500">Tạm tính (${state.cart.length} món)</span>
+                                    <span class="font-semibold text-gray-800">${formatMoney(total)}</span>
+                                </div>
+                                <div class="mt-4 flex items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3">
+                                    <span class="font-bold text-gray-900">Tổng cộng</span>
+                                    <span class="text-lg font-extrabold text-brand-800">${formatMoney(total)}</span>
+                                </div>
+                                <p class="mt-3 text-xs leading-5 text-slate-500">Số lượng mỗi tin là một món đồ duy nhất.</p>
+                                <button onclick="navigateTo('checkout')" class="mt-4 w-full rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
+                                    Tiến hành đặt hàng <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </aside>
                         </div>
                     `}
                 </div>
@@ -1500,23 +1528,23 @@ function renderAISources(r) {
 function renderAIResult() {
     const ai = state.ai;
     if (ai.loading) {
-        return `<div class="bg-white rounded-xl shadow-sm p-10 text-center"><i class="fas fa-circle-notch fa-spin text-4xl text-brand-600 mb-4"></i><p class="text-sm text-gray-600">AI đang phân tích ảnh và tìm giá thị trường...</p><p class="text-xs text-gray-400 mt-1">Quá trình này có thể mất 10–30 giây.</p></div>`;
+        return `<div role="status" aria-live="polite" class="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm"><span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50"><i class="fas fa-circle-notch fa-spin text-2xl text-brand-600"></i></span><p class="mt-4 text-sm font-semibold text-gray-800">AI đang phân tích ảnh và tìm giá thị trường...</p><p class="mt-1 text-xs text-slate-500">Quá trình này có thể mất 10–30 giây.</p></div>`;
     }
     if (ai.error) {
-        return `<div class="bg-red-50 border border-red-100 p-5 rounded-xl text-xs text-red-700"><p class="font-bold mb-3 break-words">Không định giá được: ${escapeHtml(ai.error)}</p><button onclick="runAIValuation()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded font-semibold transition">Thử lại</button></div>`;
+        return `<div role="alert" class="rounded-2xl border border-red-200 bg-white p-5 text-xs text-red-700 shadow-sm"><p class="mb-3 break-words font-bold">Không định giá được: ${escapeHtml(ai.error)}</p><button onclick="runAIValuation()" class="rounded-xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700">Thử lại</button></div>`;
     }
     const r = ai.result;
     if (!r) {
-        return `<div class="bg-white rounded-xl shadow-sm p-10 text-center text-gray-400"><i class="fas fa-magic text-4xl mb-3"></i><p class="text-sm">Kết quả định giá AI sẽ xuất hiện ở đây</p></div>`;
+        return `<div class="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-400 shadow-sm"><span class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50"><i class="fas fa-wand-magic-sparkles text-2xl text-brand-500"></i></span><p class="mt-4 text-sm">Kết quả định giá sẽ hiển thị tại đây sau khi phân tích.</p></div>`;
     }
     if (!r.price) {
         // Lỗi tạm thời của dịch vụ (hết lượt/quá tải): chỉ cần thử lại, không bắt người dùng bổ sung thông tin
         const serviceIssue = r.price_unavailable_reason === 'service';
         return `
-            <div class="bg-white rounded-xl shadow-sm p-5 space-y-4">
+            <div class="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h3 class="font-bold text-gray-800">${escapeHtml(r.product_name || "Sản phẩm")}</h3>
                 ${serviceIssue ? `
-                    <div class="bg-yellow-50 border border-yellow-200 text-yellow-900 p-3 rounded-lg text-sm flex gap-2">
+                    <div class="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                         <i class="fas fa-exclamation-triangle mt-0.5"></i>
                         <span>Đã nhận diện được sản phẩm nhưng chưa lấy được giá: ${escapeHtml(r.reasoning || "dịch vụ tìm giá đang bận")}</span>
                     </div>
@@ -1528,19 +1556,19 @@ function renderAIResult() {
                     : ""}
                 ${serviceIssue ? '' : `<p class="text-xs text-gray-500">Bổ sung thông tin vào ô "Ghi chú" bên trái rồi bấm Thử Lại.</p>`}
                 ${renderAISources(r)}
-                <button onclick="runAIValuation()" class="w-full bg-brand-700 hover:bg-brand-800 text-white py-2.5 rounded-lg text-sm font-bold shadow mt-2 transition">Thử Lại</button>
+                <button onclick="runAIValuation()" class="mt-2 w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">Thử lại</button>
             </div>
         `;
     }
     const grade = r.condition?.grade || 'Chưa xác định';
     const score = Number.isFinite(r.condition?.score) ? ` (${r.condition.score}/100)` : '';
     return `
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div class="bg-gradient-to-r from-brand-700 to-brand-900 text-white p-5">
-                <p class="text-xs text-green-100 uppercase">Giá Gợi Ý</p>
-                <p class="text-3xl font-black mt-1">${formatMoney(r.price.suggested)}</p>
-                <p class="text-xs text-green-100 mt-1">Khoảng giá: ${formatMoney(r.price.min)} – ${formatMoney(r.price.max)}</p>
-                ${r.price_basis === 'new_price_depreciated' ? `<p class="text-[11px] mt-2 inline-block bg-black/20 px-2 py-0.5 rounded">Ước tính từ giá bán mới (chưa có tin rao đồ cũ)</p>` : ''}
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-5">
+                <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Giá tham khảo</p>
+                <p class="mt-1 text-3xl font-black text-emerald-800">${formatMoney(r.price.suggested)}</p>
+                <p class="mt-1 text-xs text-slate-600">Khoảng giá: ${formatMoney(r.price.min)} – ${formatMoney(r.price.max)}</p>
+                ${r.price_basis === 'new_price_depreciated' ? `<p class="mt-2 inline-block rounded-lg bg-white px-2 py-1 text-[11px] text-slate-600 ring-1 ring-emerald-100">Ước tính từ giá bán mới (chưa có tin rao đồ cũ)</p>` : ''}
             </div>
             <div class="p-5 space-y-4 text-sm">
                 <h3 class="font-bold text-gray-800">${escapeHtml(r.product_name)}</h3>
@@ -1549,7 +1577,8 @@ function renderAIResult() {
                 ${Array.isArray(r.questions) && r.questions.length ? `<p class="text-xs text-gray-500">Để giá sát hơn: ${r.questions.map(escapeHtml).join(' ')}</p>` : ''}
                 <p class="text-xs text-gray-500">${escapeHtml(r.reasoning || "")}</p>
                 ${renderAISources(r)}
-                <button onclick="publishAIProduct()" class="w-full bg-brand-700 hover:bg-brand-800 text-white py-2.5 rounded-lg text-sm font-bold shadow transition">Đăng Bán Với Giá Này</button>
+                <p class="rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">Đây là mức tham khảo do AI hỗ trợ ước tính, không đảm bảo giá giao dịch thực tế.</p>
+                <button onclick="publishAIProduct()" class="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">Đăng bán với giá này</button>
             </div>
         </div>
     `;
@@ -1557,25 +1586,25 @@ function renderAIResult() {
 function renderAIValuation() {
     const ai = state.ai;
     return `
-                <div class="space-y-4">
+                <div class="space-y-5">
                     <div class="flex items-center gap-2 text-xs text-gray-500">
                         <a href="#" onclick="navigateTo('home'); return false;" class="hover:text-brand-700">Trang chủ</a>
                         <i class="fas fa-chevron-right text-[8px]"></i>
                         <span class="text-gray-800 font-medium">Định giá AI</span>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white rounded-xl shadow-sm p-5 space-y-4">
-                            <h1 class="text-lg font-bold text-gray-800">Định Giá Đồ Cũ Bằng AI</h1>
+                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        <div class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <div><p class="text-xs font-semibold uppercase tracking-wider text-brand-700">ReLoop AI</p><h1 class="mt-1 text-xl font-bold text-gray-900">Định giá đồ cũ bằng AI</h1><p class="mt-2 text-sm leading-6 text-slate-500">Tải ảnh và chia sẻ thêm thông tin để nhận mức giá tham khảo.</p></div>
                             <div class="grid grid-cols-3 gap-3">
                                 ${ai.images.map((img, i) => `
-                                    <div class="relative aspect-square rounded-lg overflow-hidden border">
+                                    <div class="relative aspect-square overflow-hidden rounded-xl border border-slate-200">
                                         <img src="${img.dataUrl}" alt="Ảnh sản phẩm ${i + 1}" class="w-full h-full object-cover">
                                         <button onclick="removeAIImage(${i})" aria-label="Xóa ảnh" class="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center ${ai.loading ? 'hidden' : ''}"><i class="fas fa-times"></i></button>
                                     </div>
                                 `).join('')}
                                 ${ai.images.length < AI_CONFIG.maxImages && !ai.loading ? `
-                                    <label class="aspect-square rounded-lg border-2 border-dashed border-brand-500 bg-brand-50 hover:bg-brand-100 cursor-pointer flex flex-col items-center justify-center text-brand-700 text-xs gap-1 text-center">
+                                    <label class="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50 text-center text-xs text-emerald-800 transition hover:bg-emerald-100">
                                         <i class="fas fa-camera text-2xl"></i>
                                         <span class="font-semibold">Chọn Ảnh</span>
                                         <span class="text-[10px] text-brand-600">${ai.images.length}/${AI_CONFIG.maxImages}</span>
@@ -1602,7 +1631,7 @@ function renderAIValuation() {
                                     </div>
                                 </div>
                             </div>
-                            <button onclick="runAIValuation()" ${ai.loading || ai.images.length === 0 ? 'disabled' : ''} class="w-full bg-brand-700 hover:bg-brand-800 text-white py-2.5 rounded-lg text-sm font-bold shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
+                            <button onclick="runAIValuation()" ${ai.loading || ai.images.length === 0 ? 'disabled' : ''} class="w-full rounded-xl bg-brand-600 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60">
                                 ${ai.loading ? '<i class="fas fa-circle-notch fa-spin"></i> Đang Định Giá...' : '<i class="fas fa-magic"></i> Định Giá Bằng AI'}
                             </button>
                         </div>
@@ -1643,8 +1672,8 @@ function renderCheckout() {
     const total = state.cart.reduce((sum, item) => sum + item.price, 0);
     if (!state.user) {
         return `
-                <div class="bg-white rounded-xl shadow-sm p-8 text-center max-w-lg mx-auto border border-brand-100">
-                    <div class="w-14 h-14 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-lock"></i></div>
+                <div class="bg-white rounded-2xl shadow-sm p-8 text-center max-w-lg mx-auto border border-slate-200">
+                <div class="w-14 h-14 rounded-2xl bg-brand-50 text-brand-700 flex items-center justify-center text-2xl mx-auto mb-3"><i class="fas fa-lock"></i></div>
                     <h2 class="text-base font-bold text-gray-800 mb-1">Đăng nhập để đặt hàng</h2>
                     <p class="text-xs text-gray-500 mb-5">Đơn hàng được gắn với tài khoản để người bán xác nhận và bạn theo dõi giao hàng.</p>
                     <div class="flex flex-wrap justify-center gap-2">
@@ -1656,7 +1685,7 @@ function renderCheckout() {
     }
     if (state.cart.length === 0) {
         return `
-                <div class="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto space-y-4 text-xs text-center">
+                <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm max-w-2xl mx-auto space-y-4 text-xs text-center">
                     <h1 class="text-lg font-bold text-gray-800 border-b pb-3 text-left">Thanh Toán Đơn Hàng Escrow</h1>
                     <p class="text-gray-500 py-4">Giỏ hàng đang trống, chưa có gì để thanh toán.</p>
                     <button onclick="navigateTo('home')" class="bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-brand-800 transition">Tiếp Tục Mua Sắm</button>
@@ -1664,20 +1693,25 @@ function renderCheckout() {
             `;
     }
     return `
-                <div class="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto space-y-4 text-xs">
-                    <h1 class="text-lg font-bold text-gray-800 border-b pb-3">Thanh Toán Đơn Hàng Escrow</h1>
-                    <p class="text-gray-600">ReLoop sẽ giữ khoản tiền của bạn an toàn cho đến khi nhận được hàng và xác nhận hài lòng.</p>
-                    <ul class="divide-y border rounded-lg">
+                <div class="mx-auto max-w-3xl space-y-5">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div><p class="text-xs font-semibold uppercase tracking-wider text-brand-700">Đơn hàng</p><h1 class="mt-1 text-2xl font-extrabold text-gray-900">Thông tin nhận hàng</h1></div>
+                        <button onclick="navigateTo('cart')" class="text-xs font-semibold text-brand-700 hover:text-brand-800"><i class="fas fa-arrow-left mr-1"></i> Về giỏ hàng</button>
+                    </div>
+                    <div class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 text-xs shadow-sm sm:p-7">
+                    <h2 class="text-base font-bold text-gray-900">Xác nhận đơn hàng</h2>
+                    <p class="text-sm leading-6 text-slate-600">Vui lòng cung cấp thông tin để người bán có thể phối hợp xác nhận đơn hàng và giao nhận.</p>
+                    <ul class="divide-y divide-slate-100 rounded-xl border border-slate-200">
                         ${state.cart.map(item => `
-                            <li class="flex items-center gap-3 p-2.5">
-                                <img src="${escapeHtml(item.image)}" alt="" class="w-10 h-10 rounded object-cover flex-shrink-0 bg-gray-100">
-                                <span class="flex-1 min-w-0 truncate">${escapeHtml(item.name)}</span>
-                                <span class="font-bold text-brand-800 whitespace-nowrap">${formatMoney(item.price)}</span>
+                            <li class="flex items-center gap-3 p-3">
+                                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="h-12 w-12 flex-shrink-0 rounded-lg bg-slate-100 object-cover">
+                                <span class="min-w-0 flex-1 truncate font-medium text-slate-700">${escapeHtml(item.name)}</span>
+                                <span class="whitespace-nowrap font-bold text-brand-800">${formatMoney(item.price)}</span>
                             </li>`).join('')}
                     </ul>
-                    <div class="flex justify-between items-center bg-gray-50 border rounded-lg p-3">
-                        <span class="text-gray-500">Tổng thanh toán (${state.cart.length} sản phẩm):</span>
-                        <span class="text-base font-black text-brand-800">${formatMoney(total)}</span>
+                    <div class="flex items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                        <span class="font-semibold text-slate-700">Tổng tiền (${state.cart.length} món)</span>
+                        <span class="text-lg font-black text-brand-800">${formatMoney(total)}</span>
                     </div>
                     <form onsubmit="submitOrder(event)" class="space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1696,6 +1730,7 @@ function renderCheckout() {
                         </div>
                         <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl shadow transition disabled:opacity-60">Xác Nhận Đặt Hàng</button>
                     </form>
+                    </div>
                 </div>
             `;
 }
@@ -1753,7 +1788,7 @@ const OFFER_STATUS = {
 };
 
 function badge([label, cls]) {
-    return `<span class="${cls} text-[10px] font-bold px-2 py-0.5 rounded whitespace-nowrap">${label}</span>`;
+    return `<span class="${cls} rounded-full px-2.5 py-1 text-[10px] font-bold whitespace-nowrap">${label}</span>`;
 }
 
 async function loadActivity() {
@@ -1818,7 +1853,7 @@ function offerAction(id, action) {
             </div>
             <div class="flex gap-2 justify-end">
                 <button type="button" onclick="closeModal()" class="border border-gray-300 text-gray-700 font-bold px-4 py-2 rounded-lg hover:bg-gray-50">Để sau</button>
-                <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-4 py-2 rounded-lg disabled:opacity-60">Đồng ý đổi</button>
+                <button type="submit" class="rounded-xl bg-brand-600 px-4 py-2 font-bold text-white transition hover:bg-brand-700 disabled:opacity-60">Đồng ý đổi</button>
             </div>
         </form>`);
 }
@@ -1855,7 +1890,7 @@ function offerRow(o, role) {
         ? { name: o.offeredItem, image: o.offeredImage, price: o.offeredPrice }
         : { name: o.listingName, image: o.listingImage, price: o.listingPrice };
     const side = (label, item) => `
-        <div class="flex items-center gap-2 min-w-0 flex-1">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
             <img src="${escapeHtml(item.image || '')}" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0 bg-gray-100">
             <div class="min-w-0"><div class="text-[10px] text-gray-400 uppercase font-bold">${label}</div>
                 <div class="font-semibold text-gray-800 truncate">${escapeHtml(item.name)}</div>
@@ -1864,7 +1899,7 @@ function offerRow(o, role) {
     const phone = role === 'received' ? o.proposerPhone : o.ownerPhone;
     const counterpart = role === 'received' ? o.proposerName : o.ownerName;
     return `
-        <div class="border-b py-3 text-xs space-y-2">
+        <article class="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs shadow-sm">
             <div class="flex items-center gap-2 flex-wrap">
                 ${badge(OFFER_STATUS[o.status] || OFFER_STATUS.pending)}
                 <span class="text-gray-500">${role === 'received' ? `<strong>${escapeHtml(o.proposerName)}</strong> muốn đổi với bạn` : `Bạn gửi đề nghị cho <strong>${escapeHtml(o.ownerName || 'chủ món')}</strong>`}</span>
@@ -1872,18 +1907,18 @@ function offerRow(o, role) {
             </div>
             <div class="flex items-center gap-3">
                 ${side('Bạn đưa', give)}
-                <i class="fas fa-exchange-alt text-amber-600 flex-shrink-0"></i>
+                <i class="fas fa-exchange-alt flex-shrink-0 text-brand-600"></i>
                 ${side('Bạn nhận', get)}
             </div>
             ${o.message ? `<div class="text-gray-500 break-words">“${escapeHtml(o.message)}”</div>` : ''}
             ${o.status === 'accepted' && phone ? `
-                <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-green-900">
+                <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-emerald-900">
                     <i class="fas fa-phone-alt"></i> Liên hệ ${escapeHtml(counterpart || 'đối phương')} để hẹn giao nhận: <a href="tel:${escapeHtml(phone)}" class="font-bold underline">${escapeHtml(phone)}</a>
                 </div>` : ''}
             <div class="flex flex-wrap gap-1.5">
                 ${pending && o.tradable === false ? `<span class="text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Một trong hai món đang có đơn mua hoặc đã bán/đổi nên chưa thể chấp nhận. Bạn có thể từ chối hoặc chờ.</span>` : ''}
                 ${pending && role === 'received' ? `
-                    ${o.tradable === false ? '' : `<button onclick="offerAction(${o.id}, 'accept')" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1 rounded">Chấp nhận đổi</button>`}
+                    ${o.tradable === false ? '' : `<button onclick="offerAction(${o.id}, 'accept')" class="rounded-lg bg-brand-600 px-3 py-1.5 font-bold text-white transition hover:bg-brand-700">Chấp nhận đổi</button>`}
                     <button onclick="offerAction(${o.id}, 'reject')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Từ chối</button>` : ''}
                 ${pending && role === 'sent' ? `<button onclick="offerAction(${o.id}, 'withdraw')" class="border border-gray-300 text-gray-700 font-bold px-2.5 py-1 rounded hover:bg-gray-50">Rút đề nghị</button>` : ''}
             </div>
@@ -1899,8 +1934,8 @@ function orderRow(o, role) {
         ? `Người mua: <strong>${escapeHtml(o.buyerName)}</strong> · ${escapeHtml(o.phone)} · ${escapeHtml(o.address)}`
         : `Người bán: <strong>${escapeHtml(o.sellerName)}</strong>`;
     return `
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 text-xs border-b py-3">
-            <img src="${escapeHtml(o.itemImage)}" alt="" class="w-14 h-14 rounded object-cover flex-shrink-0 bg-gray-100">
+        <article class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs shadow-sm sm:flex-row sm:items-center">
+            <img src="${escapeHtml(o.itemImage)}" alt="${escapeHtml(o.itemName)}" class="h-16 w-16 flex-shrink-0 rounded-xl bg-slate-100 object-cover">
             <div class="flex-1 min-w-0 space-y-0.5">
                 <div class="flex items-center gap-2 flex-wrap">
                     <h4 class="font-semibold text-gray-800 truncate">${escapeHtml(o.itemName)}</h4>
@@ -1945,44 +1980,44 @@ function renderOrders() {
     }[current[0]];
 
     return `
-                <div class="bg-white rounded-xl shadow-sm p-5 border space-y-4">
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                        <h1 class="text-lg font-bold text-gray-800 flex items-center gap-2"><i class="fas fa-receipt text-brand-700"></i> Đơn Hàng & Trao Đổi</h1>
-                        <button onclick="loadActivity()" ${loading ? 'disabled' : ''} class="text-xs border border-brand-200 text-brand-800 font-bold px-3 py-1.5 rounded-lg hover:bg-brand-50 disabled:opacity-60">
+                <div class="space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div><p class="text-xs font-semibold uppercase tracking-wider text-brand-700">Tài khoản ReLoop</p><h1 class="mt-1 flex items-center gap-2 text-2xl font-extrabold text-gray-900"><i class="fas fa-receipt text-brand-700"></i> Đơn hàng & trao đổi</h1></div>
+                        <button onclick="loadActivity()" ${loading ? 'disabled' : ''} class="rounded-xl border border-brand-200 bg-white px-3 py-2 text-xs font-bold text-brand-800 shadow-sm transition hover:bg-brand-50 disabled:opacity-60">
                             <i class="fas fa-sync-alt ${loading ? 'animate-spin' : ''}"></i> Làm mới
                         </button>
                     </div>
-                    <div class="flex gap-2 overflow-x-auto hide-scrollbar text-xs">
+                    <div class="flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 text-xs shadow-sm hide-scrollbar">
                         ${tabs.map(([id, label]) => `
-                            <button onclick="switchActivityTab('${id}')" class="px-3 py-1.5 rounded-lg font-bold whitespace-nowrap ${id === current[0] ? 'bg-brand-700 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">
+                            <button onclick="switchActivityTab('${id}')" class="whitespace-nowrap rounded-xl px-3 py-2 font-bold transition ${id === current[0] ? 'bg-brand-600 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-brand-50 hover:text-brand-800'}">
                                 ${label}${counts[id] ? ` <span class="bg-red-500 text-white rounded-full px-1.5 ml-1">${counts[id]}</span>` : ''}
                             </button>`).join('')}
                     </div>
                     <p class="text-[11px] text-gray-500">Quy trình escrow: người mua đặt → người bán xác nhận giao → người mua bấm "Đã nhận hàng" thì giao dịch hoàn tất. Trước đó bên nào cũng có thể hủy, món đồ sẽ quay lại chợ.</p>
-                    ${error ? `<p class="text-xs text-red-600">${escapeHtml(error)}</p>` : ''}
-                    ${!orders && loading ? `<p class="text-xs text-gray-400 text-center py-6"><i class="fas fa-circle-notch fa-spin"></i> Đang tải...</p>` : ''}
-                    ${orders && rows.length === 0 ? `<p class="text-xs text-gray-400 text-center py-6">${empty}</p>` : ''}
-                    <div>${rows.map(renderRow).join('')}</div>
+                    ${error ? `<p role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">${escapeHtml(error)}</p>` : ''}
+                    ${!orders && loading ? `<p role="status" class="rounded-2xl border border-slate-200 bg-white py-10 text-center text-sm text-slate-500"><i class="fas fa-circle-notch fa-spin mr-2 text-brand-600"></i>Đang tải hoạt động...</p>` : ''}
+                    ${orders && rows.length === 0 ? `<p class="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-sm text-slate-500">${empty}</p>` : ''}
+                    <div class="space-y-3">${rows.map(renderRow).join('')}</div>
                 </div>
             `;
 }
 
 function renderLogin() {
     if (state.user) return renderProfile();
-    const inputCls = 'w-full border rounded-lg p-2.5 text-sm focus:ring-1 focus:ring-brand-600 outline-none';
+    const inputCls = 'w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-1 focus:ring-brand-600 outline-none';
     return `
-                <div class="bg-white rounded-xl shadow-sm p-6 md:p-8 max-w-sm mx-auto border border-brand-100">
-                    <div class="text-center mb-6">
-                        <div class="w-12 h-12 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-xl mx-auto mb-3"><i class="fas fa-user"></i></div>
-                        <h1 class="text-lg font-bold text-gray-800">Đăng nhập ReLoop</h1>
-                        <p class="text-xs text-gray-500 mt-1">Đăng nhập để đăng tin mua bán và trao đổi đồ.</p>
+                <div class="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                    <div class="mb-6 text-center">
+                        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-xl text-brand-700"><i class="fas fa-user"></i></div>
+                        <h1 class="text-2xl font-extrabold text-gray-900">Chào mừng trở lại</h1>
+                        <p class="mt-2 text-sm text-slate-500">Đăng nhập để tiếp tục với ReLoop.</p>
                     </div>
                     ${state.demoAccounts.length ? `
                         <div class="mb-5">
-                            <p class="text-xs font-bold text-gray-700 mb-2">Đăng nhập nhanh</p>
+                            <p class="mb-2 text-xs font-bold text-slate-700">Đăng nhập nhanh</p>
                             <div class="space-y-2">
                                 ${state.demoAccounts.map(a => `
-                                    <button type="button" data-username="${escapeHtml(a.username)}" onclick="demoLogin(this.dataset.username)" class="demo-login-btn w-full flex items-center gap-3 border rounded-lg p-2.5 text-left hover:border-brand-600 hover:bg-brand-50 transition disabled:opacity-60">
+                                    <button type="button" data-username="${escapeHtml(a.username)}" onclick="demoLogin(this.dataset.username)" class="demo-login-btn flex w-full items-center gap-3 rounded-xl border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50 disabled:opacity-60">
                                         <span class="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${a.role === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'bg-brand-50 text-brand-700'}">
                                             <i class="fas ${a.role === 'admin' ? 'fa-user-shield' : 'fa-user'}"></i>
                                         </span>
@@ -1994,25 +2029,25 @@ function renderLogin() {
                                     </button>
                                 `).join('')}
                             </div>
-                            <div class="flex items-center gap-3 my-5 text-[11px] text-gray-400">
+                            <div class="my-5 flex items-center gap-3 text-[11px] text-slate-400">
                                 <span class="flex-1 border-t"></span> hoặc nhập mật khẩu <span class="flex-1 border-t"></span>
                             </div>
                         </div>
                     ` : ''}
-                    <form onsubmit="handleLogin(event)" class="space-y-4 text-xs">
+                    <form onsubmit="handleLogin(event)" class="space-y-4 text-sm">
                         <div>
-                            <label for="login-username" class="font-bold text-gray-700 block mb-1">Tên đăng nhập</label>
+                            <label for="login-username" class="mb-1 block font-semibold text-slate-700">Tên đăng nhập</label>
                             <input id="login-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required class="${inputCls}">
                         </div>
                         <div>
-                            <label for="login-password" class="font-bold text-gray-700 block mb-1">Mật khẩu</label>
+                            <label for="login-password" class="mb-1 block font-semibold text-slate-700">Mật khẩu</label>
                             <input id="login-password" type="password" autocomplete="current-password" required class="${inputCls}">
                         </div>
-                        <button type="submit" class="w-full bg-brand-700 hover:bg-brand-800 text-white font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
+                        <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
                             Đăng nhập
                         </button>
                     </form>
-                    <div class="mt-5 pt-4 border-t text-center text-xs text-gray-500">
+                    <div class="mt-5 border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
                         Chưa có tài khoản?
                         <a href="#" onclick="promptRegister(state.afterLogin); return false;" class="text-brand-700 font-bold hover:underline">Đăng ký tài khoản mới</a>
                     </div>
@@ -2024,13 +2059,18 @@ function renderProfile() {
     if (!state.user) return renderLogin();
     const isAdmin = state.user.role === 'admin';
     return `
-                <div class="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto text-xs space-y-3">
-                    <h2 class="text-base font-bold border-b pb-2">Hồ Sơ Của Tôi</h2>
-                    <p><strong>Tên:</strong> ${escapeHtml(state.user.name)}</p>
-                    <p><strong>Tên đăng nhập:</strong> ${escapeHtml(state.user.username)}</p>
-                    <p><strong>Vai trò:</strong> ${isAdmin ? 'Quản trị viên' : 'Người mua & bán'}</p>
-                    <p><strong>Tin đã đăng:</strong> ${myProducts().length}</p>
-                    <div class="flex flex-wrap gap-2 pt-3 border-t">
+                <div class="mx-auto max-w-2xl space-y-5 rounded-3xl border border-slate-200 bg-white p-6 text-sm shadow-sm sm:p-8">
+                    <div class="flex items-center gap-4 border-b border-slate-100 pb-5">
+                        <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-xl text-brand-700"><i class="fas fa-user"></i></span>
+                        <div><p class="text-xs font-semibold uppercase tracking-wider text-brand-700">Tài khoản ReLoop</p><h1 class="mt-1 text-xl font-extrabold text-gray-900">Hồ sơ của tôi</h1></div>
+                    </div>
+                    <dl class="grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-xl bg-slate-50 p-4"><dt class="text-xs text-slate-500">Tên</dt><dd class="mt-1 font-semibold text-slate-800">${escapeHtml(state.user.name)}</dd></div>
+                        <div class="rounded-xl bg-slate-50 p-4"><dt class="text-xs text-slate-500">Tên đăng nhập</dt><dd class="mt-1 break-all font-semibold text-slate-800">${escapeHtml(state.user.username)}</dd></div>
+                        <div class="rounded-xl bg-slate-50 p-4"><dt class="text-xs text-slate-500">Vai trò</dt><dd class="mt-1 font-semibold text-slate-800">${isAdmin ? 'Quản trị viên' : 'Người mua & bán'}</dd></div>
+                        <div class="rounded-xl bg-slate-50 p-4"><dt class="text-xs text-slate-500">Tin đã đăng</dt><dd class="mt-1 font-semibold text-slate-800">${myProducts().length}</dd></div>
+                    </dl>
+                    <div class="flex flex-wrap gap-2 border-t border-slate-100 pt-5">
                         ${isAdmin ? `<button onclick="navigateTo('admin')" class="bg-brand-700 hover:bg-brand-800 text-white font-bold px-4 py-2 rounded-lg transition"><i class="fas fa-user-shield mr-1"></i> Trang quản trị</button>` : ''}
                         <button onclick="switchChannel('seller')" class="border border-brand-200 text-brand-800 font-bold px-4 py-2 rounded-lg hover:bg-brand-50 transition">Quản lý tin đăng</button>
                         <button onclick="openActivity('purchases')" class="border border-brand-200 text-brand-800 font-bold px-4 py-2 rounded-lg hover:bg-brand-50 transition"><i class="fas fa-receipt mr-1"></i> Đơn hàng & trao đổi</button>
@@ -2097,14 +2137,14 @@ function renderAdmin() {
                         ${error ? `<p class="text-xs text-red-600 mb-3">${escapeHtml(error)}</p>` : ''}
                         <p class="text-[11px] text-gray-500 mb-3">Số liệu dạng <strong>hôm nay / tổng cộng</strong> (theo giờ Việt Nam).</p>
                         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-gray-800">
-                            ${statTile('Lượt định giá', pair('valuations'), `Lỗi: ${pair('valuation_errors')}`, 'bg-green-50 border-brand-100')}
-                            ${statTile('Lượt gọi Gemini', pair('gemini_calls'), '', 'bg-blue-50 border-blue-100')}
-                            ${statTile('Lượt gọi Tavily', pair('tavily_calls'), 'Gói Free: 1.000 credit/tháng', 'bg-amber-50 border-amber-100')}
-                            ${statTile('Lượt đăng nhập', pair('logins'), '', 'bg-gray-50 border-gray-200')}
-                            ${statTile('Tin đăng', stats?.listings?.total ?? '—', stats ? `Hiển thị ${stats.listings.available} · Đã đặt/bán/đổi ${stats.listings.total - stats.listings.available}` : '', 'bg-purple-50 border-purple-100')}
-                            ${statTile('Món đồ', stats ? stats.listings.available : '—', stats ? `Đang đặt ${stats.listings.reserved} · Đã bán ${stats.listings.sold} · Đã đổi ${stats.listings.traded}` : '', 'bg-teal-50 border-teal-100')}
-                            ${statTile('Đơn hàng', stats ? Object.values(stats.orders || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.orders?.pending || 0} · Giao ${stats.orders?.confirmed || 0} · Xong ${stats.orders?.completed || 0} · Hủy ${stats.orders?.cancelled || 0}` : '', 'bg-blue-50 border-blue-100')}
-                            ${statTile('Đề nghị đổi', stats ? Object.values(stats.offers || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.offers?.pending || 0} · Chấp nhận ${stats.offers?.accepted || 0}` : '', 'bg-amber-50 border-amber-100')}
+                            ${statTile('Lượt định giá', pair('valuations'), `Lỗi: ${pair('valuation_errors')}`, 'bg-emerald-50 border-emerald-100')}
+                            ${statTile('Lượt gọi Gemini', pair('gemini_calls'), '', 'bg-slate-50 border-slate-200')}
+                            ${statTile('Lượt gọi Tavily', pair('tavily_calls'), 'Gói Free: 1.000 credit/tháng', 'bg-slate-50 border-slate-200')}
+                            ${statTile('Lượt đăng nhập', pair('logins'), '', 'bg-slate-50 border-slate-200')}
+                            ${statTile('Tin đăng', stats?.listings?.total ?? '—', stats ? `Hiển thị ${stats.listings.available} · Đã đặt/bán/đổi ${stats.listings.total - stats.listings.available}` : '', 'bg-emerald-50 border-emerald-100')}
+                            ${statTile('Món đồ', stats ? stats.listings.available : '—', stats ? `Đang đặt ${stats.listings.reserved} · Đã bán ${stats.listings.sold} · Đã đổi ${stats.listings.traded}` : '', 'bg-slate-50 border-slate-200')}
+                            ${statTile('Đơn hàng', stats ? Object.values(stats.orders || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.orders?.pending || 0} · Giao ${stats.orders?.confirmed || 0} · Xong ${stats.orders?.completed || 0} · Hủy ${stats.orders?.cancelled || 0}` : '', 'bg-slate-50 border-slate-200')}
+                            ${statTile('Đề nghị đổi', stats ? Object.values(stats.offers || {}).reduce((a, b) => a + b, 0) : '—', stats ? `Chờ ${stats.offers?.pending || 0} · Chấp nhận ${stats.offers?.accepted || 0}` : '', 'bg-emerald-50 border-emerald-100')}
                         </div>
                     </div>
 

@@ -18,16 +18,16 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #f8fafc;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #a5d6a7;
+            background: #a7f3d0;
             border-radius: 4px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: #2e7d32;
+            background: #047857;
         }
 
         /* Giữ thanh cuộn dọc cố định để layout không bị nhảy khi chuyển trang */
@@ -49,6 +49,22 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+        }
+
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+        textarea,
+        select {
+            border-color: #e2e8f0;
+            border-radius: 0.75rem;
+            background-color: #fff;
+        }
+
+        input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+        textarea:focus,
+        select:focus {
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgb(16 185 129 / 12%);
+            outline: none;
         }
 
         .toast-fade-out {
@@ -74,38 +90,38 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-800 antialiased min-h-screen flex flex-col justify-between">
+<body class="bg-slate-50 font-sans text-gray-800 antialiased min-h-screen flex flex-col justify-between">
 
     <!-- Top Navigation / Header -->
-    <header class="sticky top-0 z-50 shadow-md">
+    <header class="sticky top-0 z-50 border-b border-slate-200/80 shadow-sm">
         <!-- Top Bar with Mode Switcher -->
-        <div class="bg-brand-900 text-white text-xs py-1.5 px-4">
+        <div class="bg-white text-slate-600 text-xs py-1.5 px-4">
             <div class="max-w-7xl mx-auto flex justify-between items-center gap-3">
                 <!-- Navigation Channels / Kênh Hoạt Động -->
                 <div class="flex items-center space-x-2 sm:space-x-4 overflow-x-auto hide-scrollbar whitespace-nowrap min-w-0">
                     <button onclick="switchChannel('buyer')" id="nav-btn-buyer" class="px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 bg-brand-700 text-white shadow">
                         <i class="fas fa-shopping-bag"></i> Kênh Người Mua
                     </button>
-                    <button onclick="switchChannel('seller')" id="nav-btn-seller" class="px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 hover:bg-brand-800 text-green-100">
+                    <button onclick="switchChannel('seller')" id="nav-btn-seller" class="px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 hover:bg-brand-50 text-slate-600">
                         <i class="fas fa-store"></i> Kênh Người Bán
                     </button>
-                    <button onclick="switchChannel('trade')" id="nav-btn-trade" class="px-2.5 py-1 rounded font-bold transition flex items-center gap-1.5 hover:bg-brand-800 text-yellow-300">
+                    <button onclick="switchChannel('trade')" id="nav-btn-trade" class="px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 hover:bg-brand-50 text-slate-600">
                         <i class="fas fa-sync-alt"></i> Kênh Trao Đổi
                     </button>
-                    <span class="text-brand-700 hidden md:inline">|</span>
-                    <a href="#" onclick="navigateTo('ai-valuation'); return false;" class="hover:text-yellow-300 text-yellow-200 font-semibold transition hidden md:flex items-center gap-1"><i class="fas fa-camera"></i> Định giá AI</a>
+                    <span class="text-slate-200 hidden md:inline">|</span>
+                    <a href="#" onclick="navigateTo('ai-valuation'); return false;" class="hover:text-brand-700 text-brand-700 font-semibold transition hidden md:flex items-center gap-1"><i class="fas fa-camera"></i> Định giá AI</a>
                 </div>
 
                 <!-- User & Notifications -->
                 <div class="flex items-center space-x-4 flex-shrink-0">
-                    <a href="#" onclick="navigateTo('info', null, 'help'); return false;" class="hover:text-green-200 flex items-center gap-1" title="Hỗ trợ"><i class="far fa-question-circle"></i> <span class="hidden md:inline">Hỗ trợ</span></a>
+                    <a href="#" onclick="navigateTo('info', null, 'help'); return false;" class="hover:text-brand-700 flex items-center gap-1" title="Hỗ trợ"><i class="far fa-question-circle"></i> <span class="hidden md:inline">Hỗ trợ</span></a>
                     <div id="user-top-bar" class="flex items-center gap-3"></div>
                 </div>
             </div>
         </div>
 
         <!-- Main Header & Search -->
-        <div class="bg-brand-800 text-white py-3.5 px-4">
+        <div class="bg-white text-slate-800 py-3.5 px-4">
             <div class="max-w-7xl mx-auto flex items-center justify-between gap-4 md:gap-8">
                 <!-- Logo -->
                 <div class="flex items-center gap-3.5 cursor-pointer select-none py-1 px-2 flex-shrink-0" onclick="switchChannel('buyer')">
@@ -114,35 +130,35 @@
      class="w-12 h-12 object-contain flex-shrink-0">
 
                     <div class="hidden sm:flex flex-col text-left justify-center">
-                        <span class="text-2xl font-black tracking-tight text-white leading-tight">ReLoop</span>
-                        <span class="text-[11px] text-green-200 font-bold tracking-wide uppercase leading-tight mt-0.5 hidden md:block">Trao món đồ cũ - Trao giá trị mới</span>
+                        <span class="text-2xl font-black tracking-tight text-brand-800 leading-tight">ReLoop</span>
+                        <span class="text-[11px] text-brand-700 font-bold tracking-wide uppercase leading-tight mt-0.5 hidden md:block">Trao món đồ cũ - Trao giá trị mới</span>
                     </div>
                 </div>
 
                 <!-- Search Bar -->
                 <div class="flex-1 min-w-0 max-w-2xl relative">
-                    <div class="flex bg-white rounded-lg overflow-hidden p-1 shadow-inner">
+                    <div class="flex bg-slate-50 rounded-xl overflow-hidden p-1 border border-slate-200">
                         <input type="text" id="search-input" placeholder="Tìm kiếm sản phẩm, nhu cầu trao đổi đồ..."
-                               class="w-full min-w-0 px-3 sm:px-4 py-1.5 text-sm text-gray-800 focus:outline-none"
+                               class="w-full min-w-0 px-3 sm:px-4 py-1.5 text-sm text-gray-800 focus:outline-none border-0 shadow-none"
                                onkeydown="handleSearch(event)">
-                        <button onclick="performSearch()" aria-label="Tìm kiếm" class="bg-brand-600 hover:bg-brand-700 text-white px-4 sm:px-6 py-1.5 rounded-md transition flex items-center gap-2 flex-shrink-0">
+                        <button onclick="performSearch()" aria-label="Tìm kiếm" class="bg-brand-600 hover:bg-brand-700 text-white px-4 sm:px-6 py-1.5 rounded-lg transition flex items-center gap-2 flex-shrink-0">
                             <i class="fas fa-search text-sm"></i>
                         </button>
                     </div>
                     <!-- Trending Searches -->
-                    <div class="flex gap-3 text-xs text-green-100 mt-1.5 px-1 overflow-x-auto hide-scrollbar whitespace-nowrap">
-                        <a href="#" onclick="filterByCategory('thoi-trang'); return false;" class="hover:text-white">Áo Nam</a>
-                        <a href="#" onclick="filterByCategory('dien-tu'); return false;" class="hover:text-white">Tai Nghe Bluetooth</a>
-                        <a href="#" onclick="filterByCategory('gia-dung'); return false;" class="hover:text-white">Nồi Chiên Không Dầu</a>
-                        <a href="#" onclick="switchChannel('trade'); return false;" class="hover:text-white">Đổi iPad Lấy Laptop</a>
+                    <div class="flex gap-3 text-xs text-slate-500 mt-1.5 px-1 overflow-x-auto hide-scrollbar whitespace-nowrap">
+                        <a href="#" onclick="filterByCategory('thoi-trang'); return false;" class="hover:text-brand-700">Áo Nam</a>
+                        <a href="#" onclick="filterByCategory('dien-tu'); return false;" class="hover:text-brand-700">Tai Nghe Bluetooth</a>
+                        <a href="#" onclick="filterByCategory('gia-dung'); return false;" class="hover:text-brand-700">Nồi Chiên Không Dầu</a>
+                        <a href="#" onclick="switchChannel('trade'); return false;" class="hover:text-brand-700">Đổi iPad Lấy Laptop</a>
                     </div>
                 </div>
 
                 <!-- Shopping Cart Icon -->
                 <div class="relative cursor-pointer p-2 flex-shrink-0" onclick="navigateTo('cart')">
                     <div class="relative">
-                        <i class="fas fa-shopping-cart text-2xl text-white hover:text-green-200 transition"></i>
-                        <span id="cart-badge" class="absolute -top-2 -right-2 bg-yellow-400 text-brand-900 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shadow">0</span>
+                        <i class="fas fa-shopping-cart text-2xl text-brand-800 hover:text-brand-600 transition"></i>
+                        <span id="cart-badge" class="absolute -top-2 -right-2 bg-brand-100 text-brand-900 font-bold text-xs w-5 h-5 rounded-full flex items-center justify-center shadow-sm">0</span>
                     </div>
                 </div>
             </div>
@@ -150,19 +166,19 @@
     </header>
 
     <!-- MAIN CONTENT CONTAINER -->
-    <main id="main-content" class="flex-grow max-w-7xl w-full mx-auto p-3 md:p-6 space-y-6">
+    <main id="main-content" class="flex-grow max-w-7xl w-full mx-auto p-3 md:p-6">
         <!-- Content will be injected dynamically via JavaScript -->
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-12 text-sm text-gray-600">
+    <footer class="bg-white border-t border-slate-200 mt-12 text-sm text-slate-600">
         <div class="max-w-7xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
             <div class="col-span-2 md:col-span-1">
                 <div class="flex items-center gap-2.5 mb-3">
                     <img src="/reloop-logo.png.jpg" alt="Logo ReLoop" class="w-12 h-12 object-contain flex-shrink-0">
                     <span class="text-xl font-black text-brand-800">ReLoop</span>
                 </div>
-                <p class="text-xs text-gray-500 leading-relaxed">Chợ mua bán và trao đổi đồ cũ. Mỗi món chỉ có một, trao tay để thêm một vòng đời mới.</p>
+                <p class="text-xs text-slate-500 leading-relaxed">Chợ mua bán và trao đổi đồ cũ. Mỗi món chỉ có một, trao tay để thêm một vòng đời mới.</p>
             </div>
             <div>
                 <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Hỗ trợ</h3>
@@ -194,7 +210,7 @@
                 </ul>
             </div>
         </div>
-        <div class="bg-gray-100 py-4 text-center text-xs border-t text-gray-500">
+        <div class="bg-slate-50 py-4 text-center text-xs border-t border-slate-200 text-slate-500">
             © 2026 ReLoop. Tất cả các quyền được bảo lưu.
         </div>
     </footer>

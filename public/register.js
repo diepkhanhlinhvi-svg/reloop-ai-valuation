@@ -20,45 +20,45 @@ function promptRegister(returnTo = null) {
 
 function renderRegister() {
     if (state.user) return renderProfile(); // đã đăng nhập thì không cần đăng ký
-    const inputCls = 'w-full border rounded-lg p-2.5 text-sm focus:ring-1 focus:ring-brand-600 outline-none';
-    const hint = 'text-[11px] text-gray-400 mt-1';
+    const inputCls = 'w-full border border-slate-200 rounded-xl p-3 text-sm focus:ring-1 focus:ring-brand-600 outline-none';
+    const hint = 'mt-1 text-[11px] leading-5 text-slate-500';
     return `
-                <div class="bg-white rounded-xl shadow-sm p-6 md:p-8 max-w-sm mx-auto border border-brand-100">
-                    <div class="text-center mb-6">
-                        <div class="w-12 h-12 rounded-full bg-yellow-100 text-yellow-800 flex items-center justify-center text-xl mx-auto mb-3"><i class="fas fa-user-plus"></i></div>
-                        <h1 class="text-lg font-bold text-gray-800">Đăng ký tài khoản ReLoop</h1>
-                        <p class="text-xs text-gray-500 mt-1">Miễn phí. Tạo xong là mua hàng, đăng tin và trao đổi đồ được ngay.</p>
+                <div class="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+                    <div class="mb-6 text-center">
+                        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-xl text-brand-700"><i class="fas fa-user-plus"></i></div>
+                        <h1 class="text-2xl font-extrabold text-gray-900">Tạo tài khoản ReLoop</h1>
+                        <p class="mt-2 text-sm leading-6 text-slate-500">Tạo tài khoản miễn phí để mua, đăng bán và trao đổi đồ.</p>
                     </div>
-                    <form onsubmit="handleRegister(event)" class="space-y-4 text-xs" novalidate>
+                    <form onsubmit="handleRegister(event)" class="space-y-4 text-sm" novalidate>
                         <div>
-                            <label for="reg-name" class="font-bold text-gray-700 block mb-1">Họ tên *</label>
+                            <label for="reg-name" class="mb-1 block font-semibold text-slate-700">Họ tên *</label>
                             <input id="reg-name" type="text" autocomplete="name" maxlength="60" placeholder="VD: Nguyễn Văn An" class="${inputCls}">
                             <p class="${hint}">Hiện với người mua/bán khi giao dịch.</p>
                         </div>
                         <div>
-                            <label for="reg-username" class="font-bold text-gray-700 block mb-1">Tên đăng nhập *</label>
+                            <label for="reg-username" class="mb-1 block font-semibold text-slate-700">Tên đăng nhập *</label>
                             <input id="reg-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" placeholder="VD: nguyenvanan" class="${inputCls}">
                             <p class="${hint}">3–30 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới. Dùng để đăng nhập sau này.</p>
                         </div>
                         <div>
-                            <label for="reg-password" class="font-bold text-gray-700 block mb-1">Mật khẩu *</label>
+                            <label for="reg-password" class="mb-1 block font-semibold text-slate-700">Mật khẩu *</label>
                             <input id="reg-password" type="password" autocomplete="new-password" maxlength="128" placeholder="Ít nhất ${REGISTER_RULES.passwordMin} ký tự" class="${inputCls}">
                         </div>
                         <div>
-                            <label for="reg-password2" class="font-bold text-gray-700 block mb-1">Nhập lại mật khẩu *</label>
+                            <label for="reg-password2" class="mb-1 block font-semibold text-slate-700">Nhập lại mật khẩu *</label>
                             <input id="reg-password2" type="password" autocomplete="new-password" maxlength="128" class="${inputCls}">
                         </div>
-                        <label class="flex items-start gap-2 text-gray-600">
-                            <input id="reg-agree" type="checkbox" class="mt-0.5">
+                        <label class="flex items-start gap-2 text-xs leading-5 text-slate-600">
+                            <input id="reg-agree" type="checkbox" class="mt-1 accent-emerald-600">
                             <span>Tôi đồng ý với điều khoản sử dụng và cam kết đăng bán đồ thật, đúng mô tả.</span>
                         </label>
-                        <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-300 text-brand-900 font-bold py-3 rounded-xl transition shadow text-xs uppercase tracking-wider disabled:opacity-60">
+                        <button type="submit" class="w-full rounded-xl bg-brand-600 py-3 font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60">
                             Tạo tài khoản
                         </button>
                     </form>
-                    <div class="mt-5 pt-4 border-t text-center text-xs text-gray-500">
+                    <div class="mt-5 border-t border-slate-100 pt-4 text-center text-sm text-slate-500">
                         Đã có tài khoản?
-                        <a href="#" onclick="promptLogin(state.afterLogin); return false;" class="text-brand-700 font-bold hover:underline">Đăng nhập</a>
+                        <a href="#" onclick="promptLogin(state.afterLogin); return false;" class="font-bold text-brand-700 hover:underline">Đăng nhập</a>
                     </div>
                 </div>
             `;

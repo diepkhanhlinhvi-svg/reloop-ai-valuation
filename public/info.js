@@ -8,10 +8,10 @@ const INFO_GROUPS = [
     { title: 'Về ReLoop', pages: ['about', 'rules', 'terms', 'privacy', 'contact'] }
 ];
 
-const infoSection = (title, body) => `<section class="space-y-2"><h2 class="text-base font-bold text-gray-800">${title}</h2>${body}</section>`;
+const infoSection = (title, body) => `<section class="space-y-2"><h2 class="text-base font-bold text-gray-900">${title}</h2>${body}</section>`;
 const infoList = (items, ordered = false) => `<${ordered ? 'ol' : 'ul'} class="${ordered ? 'list-decimal' : 'list-disc'} pl-5 space-y-1.5">${items.map(i => `<li>${i}</li>`).join('')}</${ordered ? 'ol' : 'ul'}>`;
-const infoFaq = (q, a) => `<details class="border rounded-lg p-3 bg-gray-50 group"><summary class="font-semibold text-gray-800 cursor-pointer">${q}</summary><p class="mt-2 text-gray-600">${a}</p></details>`;
-const infoLink = (label, onclick) => `<button onclick="${onclick}" class="text-brand-700 font-semibold hover:underline">${label}</button>`;
+const infoFaq = (q, a) => `<details class="group rounded-xl border border-slate-200 bg-white p-4 transition open:border-emerald-200 open:bg-emerald-50/40"><summary class="cursor-pointer font-semibold text-slate-800 marker:text-emerald-600">${q}</summary><p class="mt-3 text-sm leading-6 text-slate-600">${a}</p></details>`;
+const infoLink = (label, onclick) => `<button onclick="${onclick}" class="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">${label}</button>`;
 
 const INFO_PAGES = {
     help: {
@@ -227,8 +227,8 @@ function renderInfo() {
     const slug = INFO_PAGES[state.infoPage] ? state.infoPage : 'help';
     const page = INFO_PAGES[slug];
     return `
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <nav aria-label="Trang thông tin" class="md:col-span-1 bg-white rounded-xl shadow-sm border p-4 h-max space-y-4 text-xs">
+                <div class="grid grid-cols-1 gap-5 md:grid-cols-4">
+                    <nav aria-label="Trang thông tin" class="h-max space-y-4 rounded-2xl border border-slate-200 bg-white p-4 text-xs shadow-sm md:col-span-1">
                         ${INFO_GROUPS.map(group => `
                             <div>
                                 <h3 class="font-bold text-gray-400 uppercase tracking-wider mb-2">${group.title}</h3>
@@ -240,10 +240,10 @@ function renderInfo() {
                                 </ul>
                             </div>`).join('')}
                     </nav>
-                    <article class="md:col-span-3 bg-white rounded-xl shadow-sm border p-5 md:p-8 text-sm text-gray-600 leading-relaxed space-y-6">
-                        <header class="border-b pb-4">
-                            <h1 class="text-xl md:text-2xl font-extrabold text-gray-800 flex items-center gap-2"><i class="fas ${page.icon} text-brand-700"></i> ${page.title}</h1>
-                            <p class="text-gray-500 mt-1">${page.intro}</p>
+                    <article class="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-gray-600 shadow-sm md:col-span-3 md:p-8">
+                        <header class="border-b border-slate-100 pb-4">
+                            <h1 class="flex items-center gap-2 text-xl font-extrabold text-gray-900 md:text-2xl"><i class="fas ${page.icon} text-brand-700"></i> ${page.title}</h1>
+                            <p class="mt-2 text-slate-500">${page.intro}</p>
                         </header>
                         ${page.body()}
                     </article>
