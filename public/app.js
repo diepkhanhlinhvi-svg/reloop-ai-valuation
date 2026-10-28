@@ -452,101 +452,184 @@ function renderHome() {
         filtered = filtered.filter(p => normalizeSearch(p.name).includes(q));
     }
 
+    const heroProducts = filtered.slice(0, 2);
+    const productImage = (product, className, loading = 'lazy') => product.image
+        ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="${loading}" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden')" class="${className}"><div class="hidden ${className} flex items-center justify-center bg-emerald-50 text-emerald-700"><i class="fas fa-recycle text-4xl"></i></div>`
+        : `<div class="${className} bg-emerald-50 text-emerald-700 flex items-center justify-center"><i class="fas fa-recycle text-4xl"></i></div>`;
+
     return `
-                <!-- Hero: giới thiệu đồ cũ, mỗi món chỉ có một -->
-                <div class="rounded-xl overflow-hidden shadow-sm bg-gradient-to-r from-brand-700 to-brand-900 text-white p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-5">
-                    <div>
-                        <span class="bg-yellow-400 text-brand-900 font-bold px-3 py-1 rounded-full text-xs w-max">ĐỒ CŨ - MỖI MÓN CHỈ CÓ MỘT</span>
-                        <h1 class="text-2xl md:text-3xl font-extrabold mt-3 mb-2 leading-tight">Cho món đồ cũ một vòng đời mới</h1>
-                        <p class="text-green-100 text-sm max-w-xl">Mua đồ đã qua sử dụng với giá hợp lý, hoặc đổi ngang giá món bạn không dùng lấy món bạn cần. Ai đặt trước thì món đó được giữ cho người ấy.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-3 flex-shrink-0">
-                        <button onclick="filterByCategory('all')" class="bg-white text-brand-800 font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-green-50 transition shadow">Khám phá ngay</button>
-                        <button onclick="navigateTo('info', null, 'how-to-trade')" class="border border-white/60 text-white font-bold px-5 py-2.5 rounded-lg text-sm hover:bg-white/10 transition">Cách đổi đồ</button>
-                    </div>
-                </div>
+                <div class="space-y-8">
+                    <section class="relative isolate overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-green-50 px-5 py-8 shadow-sm sm:px-8 sm:py-10 lg:px-12 lg:py-12">
+                        <div class="pointer-events-none absolute -right-20 -top-24 -z-10 h-72 w-72 rounded-full bg-emerald-100/70 blur-2xl"></div>
+                        <div class="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
+                            <div>
+                                <span class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold tracking-[0.16em] text-emerald-700 sm:text-xs">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                                    RELOOP – CIRCULAR MARKETPLACE
+                                </span>
+                                <h1 class="mt-5 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+                                    Đồ cũ của bạn.<br>
+                                    <span class="text-emerald-600">Giá trị mới</span> cho mọi người.
+                                </h1>
+                                <p class="mt-4 max-w-xl text-sm leading-7 text-slate-600 sm:text-base">
+                                    Mua sắm tiết kiệm, đăng bán dễ dàng và trao đổi những món đồ còn giá trị. Cùng ReLoop kéo dài vòng đời sản phẩm và xây dựng lối sống bền vững.
+                                </p>
+                                <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+                                    <button onclick="document.getElementById('home-products').scrollIntoView({ behavior: 'smooth' })" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-700 hover:shadow-md sm:w-auto">
+                                        Khám phá sản phẩm <i class="fas fa-arrow-down text-xs"></i>
+                                    </button>
+                                    <button onclick="switchChannel('seller')" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-5 py-3 text-sm font-bold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-50 sm:w-auto">
+                                        <i class="fas fa-store"></i> Đăng bán ngay
+                                    </button>
+                                </div>
+                                <div class="mt-7 flex flex-wrap gap-x-5 gap-y-3 text-xs font-medium text-slate-600 sm:text-sm">
+                                    <span class="inline-flex items-center gap-2"><i class="fas fa-check-circle text-emerald-600"></i>Mua bán tiết kiệm</span>
+                                    <span class="inline-flex items-center gap-2"><i class="fas fa-sync-alt text-emerald-600"></i>Trao đổi linh hoạt</span>
+                                    <span class="inline-flex items-center gap-2"><i class="fas fa-wand-magic-sparkles text-emerald-600"></i>Hỗ trợ định giá bằng AI</span>
+                                </div>
+                            </div>
 
-                <!-- AI Valuation Promo -->
-                <div class="bg-white rounded-xl shadow-sm border border-brand-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center text-xl"><i class="fas fa-camera"></i></div>
-                        <div>
-                            <h3 class="font-bold text-gray-800 text-sm">Định giá đồ cũ bằng AI</h3>
-                            <p class="text-xs text-gray-500">Chụp 1 tấm ảnh, nhận ngay khoảng giá gợi ý và tình trạng sản phẩm.</p>
+                            <div class="relative mx-auto w-full max-w-lg">
+                                <div class="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-100 sm:h-72 sm:w-72"></div>
+                                <div class="absolute right-2 top-1 z-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl text-emerald-600 shadow-lg sm:right-6 sm:top-3 sm:h-14 sm:w-14">
+                                    <i class="fas fa-recycle"></i>
+                                </div>
+                                ${heroProducts.length ? `
+                                    <div class="relative z-10 grid grid-cols-2 items-end gap-3 px-1 pb-2 pt-12 sm:gap-4 sm:px-4 sm:pt-14">
+                                        ${heroProducts.map((product, index) => `
+                                            <button onclick="navigateTo('detail', ${product.id})" class="group overflow-hidden rounded-2xl border border-white bg-white text-left shadow-xl transition hover:-translate-y-1 hover:shadow-2xl ${index === 0 ? 'col-span-2 sm:col-span-1 sm:translate-y-5' : 'col-span-2 sm:col-span-1'}">
+                                                ${productImage(product, `h-36 w-full object-cover sm:h-44 ${index === 0 ? 'sm:h-52' : ''}`, index === 0 ? 'eager' : 'lazy')}
+                                                <span class="block p-3 sm:p-4">
+                                                    <span class="block truncate text-xs font-semibold text-slate-700 sm:text-sm">${escapeHtml(product.name)}</span>
+                                                    <span class="mt-1 block text-sm font-extrabold text-emerald-700 sm:text-base">${formatMoney(product.price)}</span>
+                                                </span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <div class="relative z-10 flex min-h-64 flex-col items-center justify-center px-6 py-12 text-center sm:min-h-80">
+                                        <div class="flex h-24 w-24 items-center justify-center rounded-3xl border border-white bg-white/90 text-5xl text-emerald-600 shadow-xl">
+                                            <i class="fas fa-recycle"></i>
+                                        </div>
+                                        <p class="mt-5 max-w-xs text-sm font-semibold text-emerald-900">Mỗi món đồ đều có thể bắt đầu một vòng đời mới.</p>
+                                    </div>
+                                `}
+                                <div class="absolute bottom-1 left-0 z-20 hidden items-center gap-2 rounded-xl border border-emerald-100 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 shadow-lg sm:flex">
+                                    <i class="fas fa-leaf text-emerald-600"></i> Chọn sống xanh hơn
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <button onclick="navigateTo('ai-valuation')" class="bg-brand-700 hover:bg-brand-800 text-white px-5 py-2 rounded-lg text-sm font-bold shadow whitespace-nowrap">Thử ngay</button>
-                </div>
+                    </section>
 
-                <!-- Category Icons Navigation -->
-                <div class="bg-white rounded-xl p-4 shadow-sm">
-                    <h2 class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">Danh Mục Sản Phẩm</h2>
-                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                    <section aria-labelledby="home-categories-heading" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                        <div class="mb-4 flex items-end justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Tìm theo nhu cầu</p>
+                                <h2 id="home-categories-heading" class="mt-1 text-lg font-bold text-gray-900 sm:text-xl">Danh mục sản phẩm</h2>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
                         ${categories.map(cat => `
                             <button onclick="filterByCategory('${cat.id}')"
-                                class="flex flex-col items-center p-3 rounded-lg hover:bg-green-50 transition border ${state.categoryFilter === cat.id ? 'border-brand-600 bg-green-50 text-brand-800 font-bold' : 'border-transparent text-gray-600'}">
-                                <div class="w-12 h-12 rounded-full bg-brand-50 text-brand-700 flex items-center justify-center mb-2 text-xl">
+                                class="group flex min-h-20 items-center gap-3 rounded-xl border px-3 py-3 text-left transition hover:border-emerald-300 hover:bg-emerald-50 ${state.categoryFilter === cat.id ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-bold' : 'border-slate-100 text-slate-600'}">
+                                <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700 transition group-hover:bg-white">
                                     <i class="fas ${cat.icon}"></i>
-                                </div>
-                                <span class="text-xs text-center">${cat.name}</span>
+                                </span>
+                                <span class="text-xs font-semibold leading-snug sm:text-sm">${cat.name}</span>
                             </button>
                         `).join('')}
-                    </div>
-                </div>
-
-                <!-- Main Product Grid -->
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-bold text-gray-800 border-l-4 border-brand-700 pl-3">
-                            ${state.searchQuery ? `Kết quả tìm kiếm cho "${escapeHtml(state.searchQuery)}"` : 'GỢI Ý HÔM NAY DÀNH CHO BẠN'}
-                        </h2>
-                        ${state.categoryFilter !== 'all' || state.searchQuery ? `
-                            <button onclick="filterByCategory('all')" class="text-xs text-brand-700 hover:underline">Xóa bộ lọc</button>
-                        ` : ''}
-                    </div>
-
-                    ${filtered.length === 0 ? `
-                        <div class="bg-white rounded-xl p-12 text-center text-gray-500 shadow-sm">
-                            <i class="fas fa-box-open text-5xl text-gray-300 mb-3"></i>
-                            <p class="text-base font-medium">Không tìm thấy sản phẩm phù hợp.</p>
-                            <button onclick="filterByCategory('all')" class="mt-4 bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-800 transition">Quay lại trang chính</button>
                         </div>
-                    ` : `
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            ${filtered.map(product => `
-                                <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden border border-gray-100 flex flex-col justify-between cursor-pointer group"
-                                     onclick="navigateTo('detail', ${product.id})">
-                                    <div class="relative overflow-hidden">
-                                        <img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" class="w-full h-44 object-cover group-hover:scale-105 transition duration-300 bg-gray-100">
-                                        ${discountLabel(product) ? `
-                                        <span class="absolute top-2 right-2 bg-yellow-400 text-brand-900 text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                                            ${escapeHtml(discountLabel(product))}
-                                        </span>` : ''}
+                    </section>
+
+                    <section id="home-products" aria-labelledby="home-products-heading" class="scroll-mt-28">
+                        <div class="mb-4 flex items-end justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Đồ tốt, thêm vòng đời</p>
+                                <h2 id="home-products-heading" class="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
+                                    ${state.searchQuery ? `Kết quả tìm kiếm cho "${escapeHtml(state.searchQuery)}"` : 'Sản phẩm nổi bật'}
+                                </h2>
+                            </div>
+                            ${state.categoryFilter !== 'all' || state.searchQuery ? `
+                                <button onclick="filterByCategory('all')" class="flex-shrink-0 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">Xóa bộ lọc</button>
+                            ` : ''}
+                        </div>
+
+                        ${filtered.length === 0 ? `
+                            <div class="rounded-2xl border border-slate-200 bg-white px-5 py-12 text-center text-slate-500 shadow-sm sm:px-12">
+                                <i class="fas fa-box-open text-5xl text-slate-300"></i>
+                                <p class="mt-3 text-base font-semibold">Không tìm thấy sản phẩm phù hợp.</p>
+                                <button onclick="filterByCategory('all')" class="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">Quay lại trang chính</button>
+                            </div>
+                        ` : `
+                            <div class="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                ${filtered.map(product => {
+                                    const condition = typeof product.condition === 'string' ? product.condition : product.condition?.grade;
+                                    return `
+                                        <button onclick="navigateTo('detail', ${product.id})" class="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg">
+                                            <span class="relative block w-full overflow-hidden bg-slate-100">
+                                                ${productImage(product, 'h-40 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-48')}
+                                                ${discountLabel(product) ? `
+                                                    <span class="absolute right-3 top-3 rounded-full bg-emerald-700 px-2.5 py-1 text-[10px] font-bold text-white shadow">
+                                                        ${escapeHtml(discountLabel(product))}
+                                                    </span>` : ''}
+                                            </span>
+                                            <span class="flex flex-1 flex-col p-3 sm:p-4">
+                                                <span class="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-gray-800 transition group-hover:text-emerald-700">${escapeHtml(product.name)}</span>
+                                                <span class="mt-2 flex flex-wrap items-baseline gap-x-2">
+                                                    <span class="text-base font-extrabold text-emerald-700 sm:text-lg">${formatMoney(product.price)}</span>
+                                                    ${hasDiscount(product) ? `<span class="text-xs text-slate-400 line-through">${formatMoney(product.originalPrice)}</span>` : ''}
+                                                </span>
+                                                <span class="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-3 text-[11px] text-slate-500">
+                                                    ${condition ? `<span class="rounded-full bg-slate-100 px-2 py-1">${escapeHtml(condition)}</span>` : ''}
+                                                    ${product.type === 'both' ? `<span class="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-700"><i class="fas fa-sync-alt mr-1"></i>Có thể trao đổi</span>` : ''}
+                                                </span>
+                                                ${product.location ? `<span class="mt-2 truncate text-xs text-slate-500"><i class="fas fa-map-marker-alt mr-1.5 text-slate-400"></i>${escapeHtml(product.location)}</span>` : ''}
+                                            </span>
+                                        </button>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `}
+                    </section>
+
+                    <section class="overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white p-5 sm:p-7">
+                        <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-start gap-4">
+                                <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-white text-xl text-emerald-600 shadow-sm"><i class="fas fa-wand-magic-sparkles"></i></div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">ReLoop AI</p>
+                                    <h2 class="mt-1 text-lg font-bold text-gray-900 sm:text-xl">Chưa biết món đồ của bạn đáng giá bao nhiêu?</h2>
+                                    <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Khám phá công cụ AI hỗ trợ tham khảo giá trị sản phẩm đã qua sử dụng.</p>
+                                </div>
+                            </div>
+                            <button onclick="navigateTo('ai-valuation')" class="inline-flex w-full flex-shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 sm:w-auto">
+                                Thử định giá AI <i class="fas fa-arrow-right text-xs"></i>
+                            </button>
+                        </div>
+                    </section>
+
+                    <section aria-labelledby="home-steps-heading" class="pb-2">
+                        <div class="mb-5 text-center">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">Bắt đầu thật dễ dàng</p>
+                            <h2 id="home-steps-heading" class="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">Một vòng đời mới, chỉ với 3 bước</h2>
+                        </div>
+                        <div class="grid gap-3 sm:grid-cols-3 sm:gap-4">
+                            ${[
+                                ['01', 'Khám phá hoặc đăng sản phẩm', 'Tìm món đồ phù hợp hoặc đăng món bạn muốn trao đi.', 'fa-magnifying-glass'],
+                                ['02', 'Mua bán hoặc đề xuất trao đổi', 'Chọn cách giao dịch phù hợp với nhu cầu của bạn.', 'fa-handshake'],
+                                ['03', 'Kết nối và hoàn tất giao dịch', 'Liên hệ với đối phương để thống nhất cách giao nhận.', 'fa-comments']
+                            ].map(([number, title, description, icon]) => `
+                                <div class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-extrabold tracking-widest text-emerald-700">${number}</span>
+                                        <i class="fas ${icon} text-lg text-emerald-600"></i>
                                     </div>
-                                    <div class="p-3 flex-grow flex flex-col justify-between">
-                                        <div>
-                                            <h3 class="text-xs font-semibold text-gray-800 line-clamp-2 mb-2 group-hover:text-brand-700 transition">
-                                                ${escapeHtml(product.name)}
-                                            </h3>
-                                            <div class="flex flex-wrap items-baseline gap-x-1.5 mb-2">
-                                                <span class="text-brand-800 font-bold text-sm md:text-base">${formatMoney(product.price)}</span>
-                                                ${hasDiscount(product) ? `<span class="text-[10px] text-gray-400 line-through">${formatMoney(product.originalPrice)}</span>` : ''}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="flex items-center justify-between text-[11px] text-gray-500 mb-2">
-                                                <span class="truncate"><i class="far fa-user"></i> ${escapeHtml(product.ownerName || 'Người bán')}</span>
-                                                <span class="whitespace-nowrap font-semibold text-brand-700">Chỉ còn 1</span>
-                                            </div>
-                                            <div class="text-[10px] text-gray-400 flex items-center gap-1">
-                                                <i class="fas fa-map-marker-alt text-gray-300"></i> ${escapeHtml(product.location)}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <h3 class="mt-4 text-sm font-bold text-gray-900">${title}</h3>
+                                    <p class="mt-2 text-xs leading-5 text-slate-500">${description}</p>
                                 </div>
                             `).join('')}
                         </div>
-                    `}
+                    </section>
                 </div>
             `;
 }
