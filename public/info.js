@@ -141,7 +141,8 @@ const INFO_PAGES = {
                 '<strong>Minh bạch:</strong> giá, tình trạng và người đăng đều hiển thị rõ ràng.',
                 '<strong>Công bằng:</strong> không tự mua món của mình, không bán trùng một món cho hai người.',
                 '<strong>An toàn:</strong> quản trị viên kiểm tra và gỡ tin vi phạm.'
-            ]))
+            ])),
+            infoSection('Những người đứng sau ReLoop', `<p>Tìm hiểu thêm về ${infoLink('đội ngũ ReLoop', "navigateTo('team')")} và những giá trị kết nối chúng tôi.</p>`)
         ].join('')
     },
 

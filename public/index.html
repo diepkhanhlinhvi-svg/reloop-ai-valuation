@@ -108,6 +108,9 @@
                     <button onclick="switchChannel('trade')" id="nav-btn-trade" class="px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 hover:bg-brand-50 text-slate-600">
                         <i class="fas fa-sync-alt"></i> Kênh Trao Đổi
                     </button>
+                    <button onclick="openCategoryCatalog()" id="nav-btn-categories" class="px-2.5 py-1.5 rounded-lg font-semibold transition flex items-center gap-1.5 hover:bg-brand-50 text-slate-600">
+                        <i class="fas fa-th-large"></i> Danh mục
+                    </button>
                     <span class="text-slate-200 hidden md:inline">|</span>
                     <a href="#" onclick="navigateTo('ai-valuation'); return false;" class="hover:text-brand-700 text-brand-700 font-semibold transition hidden md:flex items-center gap-1"><i class="fas fa-camera"></i> Định giá AI</a>
                 </div>
@@ -194,6 +197,7 @@
                 <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase">Về ReLoop</h3>
                 <ul class="space-y-2 text-xs">
                     <li><a href="#" onclick="navigateTo('info', null, 'about'); return false;" class="hover:text-brand-700">Giới thiệu</a></li>
+                    <li><a href="#" onclick="navigateTo('team'); return false;" class="hover:text-brand-700">Đội ngũ ReLoop</a></li>
                     <li><a href="#" onclick="navigateTo('info', null, 'rules'); return false;" class="hover:text-brand-700">Quy định đăng tin</a></li>
                     <li><a href="#" onclick="navigateTo('info', null, 'terms'); return false;" class="hover:text-brand-700">Điều khoản sử dụng</a></li>
                     <li><a href="#" onclick="navigateTo('info', null, 'privacy'); return false;" class="hover:text-brand-700">Chính sách bảo mật</a></li>
